@@ -2,11 +2,26 @@
   <ModId Value="" />
   <DisplayName Value="Hong Kong Road Signs" />
   <ShortDescription Value="Design Hong Kong road signs with Sign Builder" />
-  <LongDescription>Hong Kong Road Signs adds a Hong Kong sign editor and renderer to Sign Builder. Create bilingual English and Chinese direction signs with Hong Kong fonts, colours, route shields and road symbols.
+  <LongDescription>Hong Kong Road Signs is a separate add-on for Sign Builder by K1234. It adds Hong Kong-specific editing controls, sign parts, symbols, templates and rendering. It is more than a colour theme: you can assemble and edit detailed Hong Kong direction signs in the Sign Builder interface and place them using Sign Builder&#39;s existing tools.
 
-Build rounded blue and green boards, pointed flag boards and stacked signs. Arrange destinations with editable chips, arrows, exit number plaques, lane separation lines and stack border dividers. Add airport and other local symbols, roundabout and fork diagrams, and JTIS minutes displays or LED messages. Ready-made templates provide starting layouts, while individual parts remain editable.
+SIGN BOARDS AND LAYOUT
+- Create blue, green, yellow, white, brown or black signs, with rounded corners and editable borders. Make ordinary rectangular boards or left- and right-pointing flag boards. Adjust the flag board&#39;s inner arrow thickness while keeping the legend clear of the stripe.
+- Build signs from movable text, symbols, route shields, arrows, rows, columns, panels and coloured destination chips. Change chip colours, corner radius, border colour and border thickness. Align parts, adjust spacing, and size signs to their text or to highway or local-road lanes.
+- Add full-length rounded Stack Border Dividers, shorter rectangular dividers, and dashed Lane Separation Lines. Use them to separate stacked destinations or traffic lanes.
 
-Requires the original Sign Builder mod (Paradox Mods ID 165726). This is a separate add-on by K1234; Sign Builder remains the author&#39;s mod. The add-on uses Sign Builder&#39;s placement and save system and checks its required APIs when loading.</LongDescription>
+BILINGUAL TEXT AND SYMBOLS
+- Put English and Traditional Chinese on the same sign, including equal-height bilingual legends. Choose Transport Medium or Heavy for English and Noto Sans HK or Source Han Sans HK Bold for Chinese. Adjust letter size, spacing, colour and alignment; Hong Kong Chinese text has a built-in spacing default.
+- Add Hong Kong route shields, expressway plates and exit numbers. The route shield adapts to longer numbers. Pick local symbols such as airport, MTR, tunnels, Disney, hospital, parking, pedestrian, wheelchair, cycling and traffic-restriction symbols. Rotate symbols in 90-degree steps.
+- Use Hong Kong stack and lane arrows, including straight, turn and fork directions. Add exit-left and exit-right diagrams or arrange signs in stacked layouts.
+
+EXITS, ROUNDABOUTS AND DISPLAYS
+- Add large or small EXIT number plaques above a sign or inside its face. Edit the number separately from the EXIT / 出 symbol and choose the plaque&#39;s position and size.
+- Create conventional or spiral roundabout diagrams with normal, auxiliary or U-turn roundels. Add multiple side roads and choose each road&#39;s side, Arrow/Stub/RedBar shape, angle and width.
+- Add a JTIS minutes display inside a sign or above it, edit the minutes shown, and choose the LED colour. Regular LED message parts support English dot-matrix text and Chinese characters, so bilingual messages can appear on electronic signs.
+
+STARTING POINTS AND COMPATIBILITY
+- Start with four quick-add presets and 12 Hong Kong sign templates, then edit or rearrange their individual parts. The in-game preview and placed sign use the same Hong Kong renderer.
+- Requires the original Sign Builder mod (Paradox Mods ID 165726). This add-on uses Sign Builder&#39;s sign placement and save format. If a required Sign Builder API changes, the add-on stays inactive so the original mod can continue to load; an add-on update may then be needed. Install both mods, but do not install a second copy of Sign Builder.</LongDescription>
   <Thumbnail Value="Properties/Thumbnail.png" />
   <Tag Value="Code Mod" />
   <ForumLink Value="" />
