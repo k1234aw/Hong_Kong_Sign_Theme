@@ -1,6 +1,6 @@
 # Hong Kong Road Signs
 
-![Hong Kong Road Signs thumbnail](Properties/Thumbnail.png)
+![Hong Kong Road Signs thumbnail](https://raw.githubusercontent.com/k1234aw/Hong_Kong_Sign_Theme/main/Properties/Thumbnail.png)
 
 Hong Kong Road Signs is created by K1234.
 
