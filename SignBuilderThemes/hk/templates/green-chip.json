@@ -1,0 +1,50 @@
+{
+  "formatVersion": 2,
+  "theme": "hk",
+  "id": "green-chip",
+  "name": "Blue sign with green expressway chip",
+  "scheme": "blue",
+  "align": "center",
+  "items": [
+    {
+      "type": "chip",
+      "scheme": "green",
+      "border": true,
+      "radius": 3,
+      "items": [
+        {
+          "type": "column",
+          "align": "center",
+          "gap": 5,
+          "items": [
+            {
+              "type": "text",
+              "text": "Sha Tin",
+              "height": 15,
+              "font": "HK Transport Medium"
+            },
+            {
+              "type": "text",
+              "text": "沙田",
+              "height": 15,
+              "font": "Source Han Sans HK Bold"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "shield",
+      "network": "E",
+      "number": "1"
+    },
+    {
+      "type": "arrow",
+      "direction": "up-right",
+      "height": 24
+    }
+  ]
+}
+
+
+

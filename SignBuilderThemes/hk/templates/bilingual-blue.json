@@ -1,0 +1,56 @@
+{
+  "formatVersion": 2,
+  "theme": "hk",
+  "id": "bilingual-blue",
+  "name": "Blue bilingual direction",
+  "scheme": "blue",
+  "align": "center",
+  "items": [
+    {
+      "type": "column",
+      "align": "center",
+      "gap": 5,
+      "items": [
+        {
+          "type": "text",
+          "text": "Central",
+          "height": 16,
+          "font": "HK Transport Medium"
+        },
+        {
+          "type": "text",
+          "text": "中環",
+          "height": 16,
+          "font": "Source Han Sans HK Bold"
+        }
+      ]
+    },
+    {
+      "type": "column",
+      "align": "center",
+      "gap": 5,
+      "items": [
+        {
+          "type": "text",
+          "text": "Wan Chai",
+          "height": 16,
+          "font": "HK Transport Medium"
+        },
+        {
+          "type": "text",
+          "text": "灣仔",
+          "height": 16,
+          "font": "Source Han Sans HK Bold"
+        }
+      ]
+    },
+    {
+      "type": "arrow",
+      "direction": "up",
+      "height": 24
+    }
+  ]
+}
+
+
+

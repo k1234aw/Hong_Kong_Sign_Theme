@@ -1,0 +1,18 @@
+<Publish>
+  <ModId Value="" />
+  <DisplayName Value="Hong Kong Road Signs" />
+  <ShortDescription Value="Design Hong Kong road signs with Sign Builder" />
+  <LongDescription>Hong Kong Road Signs adds a Hong Kong sign editor and renderer to Sign Builder. Create bilingual English and Chinese direction signs with Hong Kong fonts, colours, route shields and road symbols.
+
+Build rounded blue and green boards, pointed flag boards and stacked signs. Arrange destinations with editable chips, arrows, exit number plaques, lane separation lines and stack border dividers. Add airport and other local symbols, roundabout and fork diagrams, and JTIS minutes displays or LED messages. Ready-made templates provide starting layouts, while individual parts remain editable.
+
+Requires the original Sign Builder mod (Paradox Mods ID 165726). This is a separate add-on by K1234; Sign Builder remains the author&#39;s mod. The add-on uses Sign Builder&#39;s placement and save system and checks its required APIs when loading.</LongDescription>
+  <Thumbnail Value="Properties/Thumbnail.png" />
+  <Tag Value="Code Mod" />
+  <ForumLink Value="" />
+  <ModVersion Value="1.1.0" />
+  <GameVersion Value="1.6.*" />
+  <Dependency Id="165726" />
+  <ChangeLog Value="Initial Hong Kong Road Signs release." />
+  <AccessLevel Value="Public" />
+</Publish>

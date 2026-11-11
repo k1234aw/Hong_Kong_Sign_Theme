@@ -1,0 +1,80 @@
+{
+  "formatVersion": 2,
+  "theme": "hk",
+  "id": "stacked-directions",
+  "name": "Stacked destinations",
+  "scheme": "blue",
+  "items": [
+    {
+      "type": "row",
+      "align": "center",
+      "items": [
+        {
+          "type": "arrow",
+          "direction": "up",
+          "height": 20
+        },
+        {
+          "type": "column",
+          "align": "center",
+          "gap": 5,
+          "items": [
+            {
+              "type": "text",
+              "text": "Sha Tin",
+              "height": 15,
+              "font": "HK Transport Medium"
+            },
+            {
+              "type": "text",
+              "text": "沙田",
+              "height": 15,
+              "font": "Source Han Sans HK Bold"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "row",
+      "align": "center",
+      "items": [
+        {
+          "type": "arrow",
+          "direction": "right",
+          "height": 20
+        },
+        {
+          "type": "column",
+          "align": "center",
+          "gap": 5,
+          "items": [
+            {
+              "type": "text",
+              "text": "Airport",
+              "height": 15,
+              "font": "HK Transport Medium"
+            },
+            {
+              "type": "text",
+              "text": "機場",
+              "height": 15,
+              "font": "Source Han Sans HK Bold"
+            }
+          ]
+        },
+        {
+          "type": "symbol",
+          "symbol": "hk/airport",
+          "height": 25
+        }
+      ]
+    }
+  ]
+}
+
+
+

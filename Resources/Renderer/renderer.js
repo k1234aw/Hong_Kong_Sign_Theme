@@ -1,0 +1,1704 @@
+// SignBuilder sign renderer.
+//
+// Builds a sign face from a JSON design. All dimensions in a design are inches (as in the MUTCD
+// and the FHWA Standard Sign Builder book); they are converted to pixels at render time. The same
+// file is meant to back the in-game editor preview, so the editor and the baked in-world texture
+// always agree.
+//
+// The game calls window.hsRender(design, pixelsPerInch) via View.ExecuteScript. The sign is laid
+// out at the top-left of the page on a transparent background; the C# side measures its pixel
+// bounding box to learn the physical size, so no data needs to flow back to C#.
+//
+// Roadgeek 2014 fonts are normalized to a cap height of 1000 units in a 1750-unit em, so a CSS
+// font-size of 1.75 x the letter height gives exact MUTCD capital heights.
+
+(function () {
+  "use strict";
+
+  // Everything country-specific (fonts, colors, route plates, arrows, defaults, units) comes from a theme
+  // (Themes/<id>/theme.json). Themes are registered by the editor, or travel inside the design as "_theme".
+  var THEMES = {};
+  var T = null; // theme of the sign being rendered
+  var DEFAULTS = null;
+  var BASE_DEFAULTS = {
+    font: "", border: 2, cornerRadius: 12, textHeight: 16, shieldHeight: 36, arrowHeight: 24,
+    lineGap: 0.75, // x tallest legend in the block
+    margin: 0.75, // x tallest legend on the sign
+    itemGap: 0.6, // horizontal gap between row items, x row height
+    scheme: "green",
+  };
+  var DEFAULT_ARROW = "M32 0 H68 V88 H100 L50 150 L0 88 H32 Z";
+  // Families that already have an @font-face rule on this page (rules are never rewritten: re-parsing a style
+  // sheet makes Gameface fetch every font in it again, all at once).
+  var loadedFamilies = {};
+
+  function registerTheme(def, base) {
+    if (!def || !def.id) return;
+    var json = JSON.stringify(def);
+    var known = THEMES[def.id];
+    if (known && known.json === json && known.base === (base || "")) return;
+    var fonts = {};
+    (def.fonts || []).forEach(function (f) { fonts[f.family] = f; });
+    THEMES[def.id] = { def: def, base: base || "", fonts: fonts, json: json, fontsLoaded: false };
+  }
+
+  // A theme's fonts are added to the page the first time one of its signs is drawn, one style element per theme.
+  function ensureFonts(theme) {
+    if (!theme || theme.fontsLoaded) return;
+    theme.fontsLoaded = true;
+    var css = "";
+    (theme.def.fonts || []).forEach(function (f) {
+      if (!f.file || loadedFamilies[f.family]) return;
+      loadedFamilies[f.family] = true;
+      var url = /^[a-z]+:\/\//.test(f.file) ? f.file : theme.base + f.file;
+      css += '@font-face { font-family: "' + f.family + '"; src: url("' + url + '"); }\n';
+    });
+    if (!css) return;
+    var style = document.createElement("style");
+    style.textContent = css;
+    document.head.appendChild(style);
+  }
+
+  function useTheme(doc) {
+    if (doc && doc._theme) registerTheme(doc._theme, doc._themeBase);
+    if (doc && doc._libraries) for (var id in doc._libraries) registerLibrary(doc._libraries[id]);
+    T = THEMES[(doc && doc.theme) || "us"] || THEMES.us || THEMES[Object.keys(THEMES)[0]] || { def: {}, base: "", fonts: {}, fontsLoaded: true };
+    ensureFonts(T);
+    DEFAULTS = {};
+    for (var k in BASE_DEFAULTS) DEFAULTS[k] = BASE_DEFAULTS[k];
+    var d = T.def.defaults || {};
+    for (var j in d) DEFAULTS[j] = d[j];
+    // Designs are measured in the theme's units: inches, or millimeters for metric countries.
+    ppu = ppi / (T.def.units === "mm" ? 25.4 : 1);
+  }
+
+  var ppu = 3;
+  // Set while drawing a sign's glow (see hsRender).
+  var glowOnly = false;
+  var ppi = 3;
+  var annotate = false;
+
+  // Tags an element with the design path of the item it renders, so the editor can map clicks back.
+  function tag(e, path) {
+    if (annotate && e && path != null) e.setAttribute("data-sb-path", path);
+    return e;
+  }
+
+  // Theme units (inches or millimeters) to CSS pixels.
+  function px(v) {
+    return (Math.round(v * ppu * 100) / 100) + "px";
+  }
+
+  function el(tag, className, style) {
+    var e = document.createElement(tag);
+    if (className) e.className = className;
+    if (style) for (var k in style) e.style[k] = style[k];
+    return e;
+  }
+
+  function scheme(name) {
+    var schemes = T.def.schemes || {};
+    return schemes[name] || schemes[DEFAULTS.scheme] || schemes[Object.keys(schemes)[0]] || { bg: "#006b45", fg: "#ffffff" };
+  }
+
+  // ---------------------------------------------------------------- element heights
+
+  function arrowHeightOf(item) {
+    var style = item.style || (LANE_DIRECTION.test(item.direction || "") ? "lane" : "standard");
+    var sizes = T.def.arrowSizes || {};
+    return item.height || sizes[style] || DEFAULTS.arrowHeight;
+  }
+
+  // Nominal height (inches) of an element, used for spacing rules.
+  function heightOf(item) {
+    if (!item) return 0;
+    switch (item.type) {
+      case "text": return item.height || DEFAULTS.textHeight;
+      case "shield": return item.height || DEFAULTS.shieldHeight;
+      case "symbol": return item.height || DEFAULTS.shieldHeight;
+      case "arrow": return arrowHeightOf(item);
+      case "diagram": return item.height || DEFAULTS.arrowHeight * 2.2;
+      case "led": return (item.height || DEFAULTS.textHeight * 0.8) * Math.max(1, (item.lines || []).length) * 1.5;
+      case "minutes": return (item.height || DEFAULTS.textHeight * 0.5) * 2.4;
+      case "exit": return (item.height || 22) * (item.exitStyle === "small" ? 1.3 : 1.6);
+      case "spacer": return item.height || 0;
+      case "row":
+      case "column":
+      case "panel":
+      case "chip":
+      case "tab":
+        var h = 0;
+        (item.items || []).forEach(function (c) { if (!isTab(c)) h = Math.max(h, heightOf(c)); });
+        return h;
+      default: return 0;
+    }
+  }
+
+  // ---------------------------------------------------------------- elements
+
+  // Font size and vertical offset per letter height: "scale" = em / cap height, "offset" puts the capitals'
+  // top at the top of the box (from the font's metrics; Roadgeek 2014 is 1.75 and 0.125).
+  // "weight" picks a face of a family the game itself provides (e.g. "Noto Sans JP" bold), which has no font file.
+  var LED_COLOR = "#ffb000";
+
+  // Family names are quoted: some are not valid bare CSS names (e.g. "Perfect DOS VGA 437").
+  function quoted(family) {
+    return family ? '"' + String(family).replace(/"/g, "") + '"' : family;
+  }
+
+  function metrics(family) {
+    var f = T.fonts[family];
+    return { scale: (f && f.scale) || 1.75, offset: f && f.offset != null ? f.offset : 0.125, weight: (f && f.weight) || "normal" };
+  }
+
+  // <tracking>: extra space between letters, in hundredths of the letter height (negative tightens).
+  function textBox(text, h, family, color, tracking) {
+    var m = metrics(family);
+    var e = el("div", "sb-text", {
+      fontFamily: quoted(family), fontWeight: m.weight, fontSize: px(h * m.scale), lineHeight: px(h), height: px(h), top: px(h * m.offset), color: color,
+    });
+    if (tracking) {
+      // Gameface does not reliably measure CSS letter-spacing on an inline child.
+      // Give each gap its own width, with no gap after the last character. This
+      // keeps the outer selection box and the right-aligned last glyph together.
+      var space = h * tracking / 100;
+      // Gameface treats inline-flex children as a vertical stack. Use the
+      // same explicit horizontal flex layout as the other renderer rows.
+      e.style.display = "flex";
+      e.style.flexDirection = "row";
+      e.style.flexWrap = "nowrap";
+      e.style.alignItems = "flex-start";
+      e.style.flexShrink = "0";
+      e.style.whiteSpace = "nowrap";
+      var chars = Array.from(String(text));
+      for (var i = 0; i < chars.length; i++) {
+        var letter = el("span", null, { display: "block", whiteSpace: "pre", flexShrink: "0" });
+        if (i < chars.length - 1) letter.style.marginRight = px(space);
+        letter.textContent = chars[i];
+        e.appendChild(letter);
+      }
+    } else {
+      e.textContent = text;
+    }
+    return e;
+  }
+
+  function renderText(item, ctx) {
+    var h = item.height || DEFAULTS.textHeight;
+    // On a message board, legends are LED lettering (unless the part picks a font).
+    if (ctx.led && !item.font) return ledText(item.text || "", h, item.color || ctx.fg);
+    var value = item.text || "";
+    var tracking = item.tracking;
+    if (tracking == null && T.def.id === "hk" && /[\u3400-\u9fff]/.test(value))
+      tracking = DEFAULTS.chineseTracking || 0;
+    return textBox(value, h, item.font || ctx.font, item.color || ctx.fg, tracking);
+  }
+
+  // 5 x 7 dot-matrix letters, as on LED message boards: 7 rows of 5 bits each (top row first).
+  var LED_GLYPHS = {
+    "A": "0e11111f111111", "B": "1e11111e11111e", "C": "0e11101010110e", "D": "1c12111111121c", "E": "1f10101e10101f",
+    "F": "1f10101e101010", "G": "0e11101711110f", "H": "1111111f111111", "I": "0e04040404040e", "J": "0702020202120c",
+    "K": "11121418141211", "L": "1010101010101f", "M": "111b1515111111", "N": "11111915131111", "O": "0e11111111110e",
+    "P": "1e11111e101010", "Q": "0e11111115120d", "R": "1e11111e141211", "S": "0f10100e01011e", "T": "1f040404040404",
+    "U": "1111111111110e", "V": "11111111110a04", "W": "1111111515150a", "X": "11110a040a1111", "Y": "1111110a040404",
+    "Z": "1f01020408101f", "0": "0e11131519110e", "1": "040c040404040e", "2": "0e11010204081f", "3": "1f02040201110e",
+    "4": "02060a121f0202", "5": "1f101e0101110e", "6": "0608101e11110e", "7": "1f010204080808", "8": "0e11110e11110e",
+    "9": "0e11110f01020c", " ": "00000000000000", ".": "00000000000c0c", ",": "000000000c0408", ":": "000c0c000c0c00",
+    "-": "0000001f000000", "/": "00010204081000", "!": "04040404040004", "?": "0e110102040004", "$": "040f140e051e04",
+    "&": "0c12140815120d", "'": "0c040800000000", "(": "02040808080402", ")": "08040202020408", "+": "0004041f040400",
+    "%": "18190204081303", "#": "0a0a1f0a1f0a0a", "\"": "0a0a0a00000000", "@": "0e11010d15150e",
+    "=": "00001f001f0000", "<": "02040810080402", ">": "08040201020408", "*": "0004150e150400",
+  };
+
+  var ledCjkFontLoaded = {};
+  function ledCjkFamily() {
+    // The add-on stores themes beside Resources, not inside it. Resolve the
+    // font through Sign Builder's registered theme URL instead of a relative
+    // renderer URL, which worked only in the old combined mod.
+    var theme = THEMES.hk || T;
+    var font = theme && theme.fonts["Source Han Sans HK Bold"];
+    if (!font || !font.file) return "Noto Sans JP";
+    var url = /^[a-z]+:\/\//.test(font.file) ? font.file : theme.base + font.file;
+    if (ledCjkFontLoaded[url]) return "SignBuilder LED CJK";
+    ledCjkFontLoaded[url] = true;
+    var style = document.createElement("style");
+    style.textContent = '@font-face { font-family: "SignBuilder LED CJK"; src: url("' +
+      url + '"); }';
+    document.head.appendChild(style);
+    return "SignBuilder LED CJK";
+  }
+
+  // LED lettering: dot matrix for supported characters, with native font glyphs for Chinese and other Unicode.
+  function ledText(text, h, color) {
+    var chars = Array.from(String(text).toUpperCase());
+    var pitch = h / 7, dot = pitch * 0.8;
+    var d = [];
+    var nativeGlyphs = [], cursor = 0;
+    chars.forEach(function (ch) {
+      var g = LED_GLYPHS[ch];
+      if (!g) {
+        ledCjkFamily();
+        nativeGlyphs.push({ text: ch, x: cursor });
+        cursor += h * 1.15;
+        return;
+      }
+      for (var row = 0; row < 7; row++) {
+        var bits = parseInt(g.substr(row * 2, 2), 16);
+        for (var col = 0; col < 5; col++) {
+          if (!(bits & (16 >> col))) continue;
+          var x = cursor + col * pitch, y = row * pitch;
+          d.push("M" + x.toFixed(2) + " " + y.toFixed(2) + "h" + dot.toFixed(2) + "v" + dot.toFixed(2) + "h-" + dot.toFixed(2) + "Z");
+        }
+      }
+      cursor += 6 * pitch;
+    });
+    var w = Math.max(1, cursor - pitch);
+    var ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("class", "sb-led");
+    svg.setAttribute("viewBox", "0 0 " + w.toFixed(2) + " " + h.toFixed(2));
+    svg.setAttribute("width", String(w * ppu));
+    svg.setAttribute("height", String(h * ppu));
+    if (d.length) {
+      var path = document.createElementNS(ns, "path");
+      path.setAttribute("d", d.join(""));
+      path.setAttribute("fill", color);
+      svg.appendChild(path);
+    }
+    nativeGlyphs.forEach(function (glyph) {
+      var t = document.createElementNS(ns, "text");
+      t.setAttribute("x", glyph.x.toFixed(2));
+      t.setAttribute("y", (h * 0.96).toFixed(2));
+      t.setAttribute("font-family", quoted(ledCjkFamily()));
+      t.setAttribute("font-size", (h * 1.12).toFixed(2));
+      t.setAttribute("fill", color);
+      t.textContent = glyph.text;
+      svg.appendChild(t);
+    });
+    // The glow pass (the lit parts of the sign at night) shows only LED lettering.
+    if (glowOnly) svg.style.visibility = "visible";
+    return svg;
+  }
+
+  // Whether a background color is light (white, yellow...), so white artwork needs an outline to show on it.
+  function isLight(color) {
+    var m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color || "");
+    if (!m) return false;
+    var hex = m[1].length === 3 ? m[1].replace(/./g, "$&$&") : m[1];
+    var c = [0, 2, 4].map(function (i) { return parseInt(hex.substr(i, 2), 16) / 255; });
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] > 0.5;
+  }
+
+  // Route plates come from the theme: "img" (artwork, number on top), "ellipse", "rect" (colored plate with an
+  // optional border) or "plain" (just colored text, e.g. UK primary route numbers). "onLight" replaces any of these
+  // settings on light backgrounds (e.g. outlined artwork for a white shield), "onWide" for three-character numbers
+  // (e.g. a larger number on a wide shield).
+  function renderShield(item, ctx) {
+    var shields = T.def.shields || {};
+    var def = shields[item.network] || shields[Object.keys(shields)[0]] || { shape: "rect", bg: "#ffffff", fg: "#000000" };
+    var over = function (settings) {
+      var merged = {};
+      for (var k in def) merged[k] = def[k];
+      for (k in settings) merged[k] = settings[k];
+      def = merged;
+    };
+    if (def.onLight && isLight(ctx.bg)) over(def.onLight);
+    var h = item.height || DEFAULTS.shieldHeight;
+    var number = (def.prefix || "") + String(item.number != null ? item.number : "");
+    var wide = (String(item.number || "").length >= (def.wideAt || 3) && def.wide) || 1;
+    if (wide > 1 && def.onWide) over(def.onWide);
+    var font = (wide > 1 && def.wideFont) || def.font || ctx.font;
+    var shape = def.shape || (def.img ? "img" : "rect");
+    // Three-character numbers are drawn smaller on artwork that has no wide version (it is stretched, not widened).
+    var nh = h * (def.num || 0.6) * (wide > 1 && def.img && !def.wideImg ? 0.9 : 1);
+    if (shape === "rect" || shape === "plain") {
+      // Plates size to their text: padding either side, like European route number plates.
+      var padX = h * (def.padX != null ? def.padX : 0.25);
+      var label = textBox(number, nh, font, def.fg || ctx.fg);
+      var plate = el("div", "sb-plate", {
+        display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center",
+        height: px(h), padding: "0px " + px(padX), minWidth: px(h * (def.minAspect || 0)),
+        backgroundColor: shape === "plain" ? "transparent" : (def.bg || "#ffffff"),
+        borderRadius: px(h * (def.radius != null ? def.radius : 0.12)),
+      });
+      if (def.border && shape !== "plain") {
+        plate.style.border = px(h * (def.borderWidth || 0.06)) + " solid " + def.border;
+      }
+      label.style.top = "0px";
+      label.style.marginTop = px(nh * metrics(font).offset);
+      plate.appendChild(label);
+      return plate;
+    }
+    var w = h * (def.aspect || 1) * wide;
+    var box = el("div", "sb-shield", { width: px(w), height: px(h) });
+    if (shape === "ellipse") {
+      box.appendChild(el("div", null, {
+        position: "absolute", left: "0px", top: "0px", width: px(w), height: px(h),
+        borderRadius: px(h / 2), backgroundColor: def.bg || "#ffffff",
+      }));
+      if (def.border) {
+        box.appendChild(el("div", null, {
+          // Inset evenly on every side (the border is inside the box).
+          position: "absolute", left: px(h * 0.06), top: px(h * 0.06), width: px(w - h * 0.12), height: px(h * 0.88),
+          boxSizing: "border-box", borderRadius: px(h / 2), border: px(h * 0.02) + " solid " + def.border,
+        }));
+      }
+    } else {
+      var img = el("img", null, { width: px(w), height: px(h) });
+      // "wideImg" is the artwork for three-character numbers (a wider shield), when the theme has one.
+      img.src = T.base + ((wide > 1 && def.wideImg) || def.img);
+      box.appendChild(img);
+    }
+    var m = metrics(font);
+    var num = el("div", "sb-num", {
+      width: px(w), top: px(h * (def.top != null ? def.top : 0.3) + nh * m.offset),
+      fontFamily: quoted(font), fontWeight: m.weight, fontSize: px(nh * m.scale), lineHeight: px(nh), height: px(nh), color: def.fg || def.color || "#000000",
+    });
+    num.textContent = number;
+    box.appendChild(num);
+    return box;
+  }
+
+  // 1.0's arrow directions: the theme's single "arrow" (drawn pointing down) turned this far.
+  var ARROWS = {
+    down: 0, up: 180, left: 90, right: -90, "down-left": 45, "down-right": -45, "up-left": 135, "up-right": -135,
+  };
+  // Lane arrows saved before arrows had styles have none: these directions are lane arrows, everything else straight.
+  var LANE_DIRECTION = /^((turn|split|slight|corner|add)-(left|right)|fork)$/;
+  var VECTORS = {
+    up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0], "up-left": [-1, -1], "up-right": [1, -1], "down-left": [-1, 1], "down-right": [1, 1],
+  };
+
+  // ---------------------------------------------------------------- symbol libraries
+  //
+  // Arrows, the road diagram arrowhead and symbols come from symbol libraries (Symbols/<id>/library.json), which
+  // themes list ("libraries": ["mutcd"], or "mutcd/overhead" for one arrow category); "basic" (1.0's arrows) comes
+  // last for every theme. An arrow can also borrow another library's ("library": "uk"). A library's arrows are grouped
+  // in categories (an arrow's "style": "" is "standard"); each shape says how it is drawn ("frame") and which other
+  // directions it gives:
+  //  - "straight": 150 units long in the direction it "points", centered on (50, 75); "rotate" lists the turns
+  //    (degrees clockwise) that give more directions, "mirror" ("x", "y" or "both") the mirror images (a diagonal that
+  //    is not at 45 degrees leans the same way in every corner);
+  //  - "standing": pointing up, standing on the bottom of a box 150 tall; with a "side" ("left" or "right") its
+  //    direction is "<name>-<side>" and "mirror": true gives the other side, without one it is the name alone.
+  var LIBS = {};
+  var libsVersion = 0;
+
+  function registerLibrary(lib) {
+    if (!lib || !lib.id) return;
+    var json = JSON.stringify(lib);
+    if (LIBS[lib.id] && LIBS[lib.id].json === json) return;
+    LIBS[lib.id] = { def: lib, json: json };
+    libsVersion++;
+  }
+
+  // The theme's libraries, most important first: [{ lib, only (one arrow category, or null) }]; an arrow borrowing a
+  // library ("library") has that one. Every design draws with them, made with 1.0 or since (1.0's arrows and road
+  // diagram arrowheads are the same size as the theme's, so its signs keep their layout).
+  function themeLibs(borrowed) {
+    var list = [];
+    (borrowed ? [borrowed] : T.def.libraries || []).forEach(function (entry) {
+      var parts = String(entry).split("/");
+      if (LIBS[parts[0]]) list.push({ lib: LIBS[parts[0]].def, only: parts[1] || null });
+    });
+    // A borrowed library's arrows are its own (missing directions fall back to 1.0's arrow).
+    if (!borrowed && LIBS.basic && !list.some(function (l) { return l.lib.id === "basic"; })) list.push({ lib: LIBS.basic.def, only: null });
+    return list;
+  }
+
+  function nameOf(v) {
+    var x = Math.round(v[0]), y = Math.round(v[1]);
+    for (var k in VECTORS) if (VECTORS[k][0] === x && VECTORS[k][1] === y) return k;
+    return null;
+  }
+
+  // The directions a shape gives: [{ dir, rot, sx, sy, mirror (standing arrows) }], the way it is drawn first.
+  function shapeDirections(key, shape) {
+    var out = [];
+    if (shape.frame === "straight") {
+      var v = VECTORS[shape.points];
+      if (!v) return out;
+      out.push({ dir: shape.points, rot: 0, sx: 1, sy: 1 });
+      (shape.rotate || []).forEach(function (deg) {
+        var r = deg * Math.PI / 180, cos = Math.cos(r), sin = Math.sin(r);
+        var dir = nameOf([v[0] * cos - v[1] * sin, v[0] * sin + v[1] * cos]);
+        if (dir) out.push({ dir: dir, rot: deg, sx: 1, sy: 1 });
+      });
+      var m = shape.mirror;
+      var flips = m === "both" ? [[-1, 1], [1, -1], [-1, -1]] : m === "x" ? [[-1, 1]] : m === "y" ? [[1, -1]] : [];
+      flips.forEach(function (f) {
+        var dir = nameOf([v[0] * f[0], v[1] * f[1]]);
+        if (dir) out.push({ dir: dir, rot: 0, sx: f[0], sy: f[1] });
+      });
+    } else if (shape.frame === "standing" && shape.side) {
+      out.push({ dir: key + "-" + shape.side, mirror: false });
+      if (shape.mirror) out.push({ dir: key + "-" + (shape.side === "left" ? "right" : "left"), mirror: true });
+    } else if (shape.frame === "standing") {
+      out.push({ dir: key, mirror: false });
+    }
+    return out;
+  }
+
+  // The theme's arrow categories: [{ id, label, title, perRow, order, ways: { direction: { shape, ... } } }], in
+  // the order its libraries list them. Each direction comes from the most important library that has it: drawn that
+  // way if it can, else turned or mirrored. The theme's own "arrow" (1.0's single straight arrow) comes after its
+  // libraries, before the basic one.
+  function arrowCategories(borrowed) {
+    var cacheKey = borrowed ? "categoriesFrom:" + borrowed : "categories";
+    if (T[cacheKey] && T[cacheKey + "Version"] === libsVersion) return T[cacheKey];
+    var cats = [], byId = {};
+    var add = function (id, info, shapes) {
+      var c = byId[id];
+      if (!c) {
+        c = byId[id] = { id: id, label: info.label || id, title: info.title || "", perRow: info.perRow || 4, order: (info.order || []).slice(), ways: {} };
+        cats.push(c);
+      }
+      var keys = Object.keys(shapes || {});
+      var found = keys.map(function (k) { return shapeDirections(k, shapes[k]).map(function (w) { w.shape = shapes[k]; return w; }); });
+      // Shapes drawn pointing a way win over turned or mirrored ones (within one library).
+      [0, 1].forEach(function (pass) {
+        found.forEach(function (ws) {
+          ws.forEach(function (w, i) {
+            if ((i === 0) !== (pass === 0) || c.ways[w.dir]) return;
+            c.ways[w.dir] = w;
+            if (c.order.indexOf(w.dir) < 0) c.order.push(w.dir);
+          });
+        });
+      });
+    };
+    var own = function () {
+      if (T.def.arrow && !borrowed) add("standard", {}, { down: { frame: "straight", d: T.def.arrow, points: "down", rotate: [180, 90, -90, 45, -45, 135, -135] } });
+      own = function () {};
+    };
+    themeLibs(borrowed).forEach(function (l) {
+      if (l.lib.id === "basic") own();
+      var arrows = l.lib.arrows || {};
+      Object.keys(arrows).forEach(function (id) {
+        if (!l.only || l.only === id) add(id, arrows[id], arrows[id].shapes);
+      });
+    });
+    own();
+    T[cacheKey] = cats;
+    T[cacheKey + "Version"] = libsVersion;
+    return cats;
+  }
+
+  function category(id, borrowed) {
+    var cats = arrowCategories(borrowed);
+    for (var i = 0; i < cats.length; i++) if (cats[i].id === id) return cats[i];
+    return null;
+  }
+
+  // Where an arrow's shape comes from: its style's category (in the library it borrows from, if any), else the
+  // straight or lane arrows, else 1.0's arrow.
+  function arrowWay(style, dir, borrowed) {
+    var id = style || (LANE_DIRECTION.test(dir) ? "lane" : "standard");
+    var c = category(id, borrowed), s = category("standard", borrowed), l = category("lane", borrowed);
+    return (c && c.ways[dir]) || (s && s.ways[dir]) || (l && l.ways[dir]) ||
+      { shape: { frame: "straight", d: T.def.arrow || DEFAULT_ARROW, points: "down" }, rot: ARROWS[dir] || 0, sx: 1, sy: 1 };
+  }
+
+  // Corner and control points of a path made of absolute M/L/H/V/C commands (enough to find a rotated arrow's
+  // bounds; control points can only make them a little loose).
+  function pathPoints(d) {
+    var pts = [], x = 0, y = 0, re = /([MLHVCZ])([^MLHVCZ]*)/gi, m;
+    while ((m = re.exec(d))) {
+      var n = (m[2].match(/-?[\d.]+/g) || []).map(Number);
+      var c = m[1].toUpperCase();
+      if (c === "M" || c === "L" || c === "C") { for (var i = 0; i + 1 < n.length; i += 2) { x = n[i]; y = n[i + 1]; pts.push([x, y]); } }
+      else if (c === "H") { n.forEach(function (v) { x = v; pts.push([x, y]); }); }
+      else if (c === "V") { n.forEach(function (v) { y = v; pts.push([x, y]); }); }
+    }
+    return pts.length ? pts : [[0, 0], [100, 150]];
+  }
+
+  // An arrow's outline, its transform and the box that fits it (in the shape's 150-unit space).
+  function arrowGeometry(style, dir, borrowed) {
+    var w = arrowWay(style, dir || "down", borrowed && LIBS[borrowed] ? borrowed : null);
+    var d = w.shape.d, transform = null, vb;
+    if (w.shape.frame === "standing") {
+      if (w.mirror) transform = "translate(100 0) scale(-1 1)";
+      if (/a/i.test(d)) {
+        vb = [0, 0, 100, 150]; // arcs: the shape fills the box
+      } else {
+        // As wide as the shape, as tall as the box, so standing arrows of one size stand level in a row.
+        var lx0 = 1e9, lx1 = -1e9;
+        pathPoints(d).forEach(function (p) { lx0 = Math.min(lx0, p[0]); lx1 = Math.max(lx1, p[0]); });
+        vb = w.mirror ? [100 - lx1, 0, lx1 - lx0, 150] : [lx0, 0, lx1 - lx0, 150];
+      }
+    } else {
+      var rot = w.rot, sx = w.sx, sy = w.sy;
+      if (rot) transform = "rotate(" + rot + " 50 75)";
+      else if (sx < 0 || sy < 0) transform = "translate(50 75) scale(" + sx + " " + sy + ") translate(-50 -75)";
+      var r = rot * Math.PI / 180, cos = Math.cos(r), sin = Math.sin(r);
+      var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+      pathPoints(d).forEach(function (p) {
+        var dx = (p[0] - 50) * sx, dy = (p[1] - 75) * sy;
+        var X = 50 + dx * cos - dy * sin, Y = 75 + dx * sin + dy * cos;
+        x0 = Math.min(x0, X); y0 = Math.min(y0, Y); x1 = Math.max(x1, X); y1 = Math.max(y1, Y);
+      });
+      vb = [x0, y0, x1 - x0, y1 - y0];
+    }
+    return { d: d, transform: transform, viewBox: vb };
+  }
+
+  // Arrows are as long as their height in the direction they point, with a box that fits them (so diagonal and sideways arrows are never clipped).
+  function renderArrow(item, ctx) {
+    var h = arrowHeightOf(item);
+    var ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    var path = document.createElementNS(ns, "path");
+    var g = arrowGeometry(item.style, item.direction || "down", item.library);
+    var vb = g.viewBox;
+    path.setAttribute("d", g.d);
+    if (g.transform) path.setAttribute("transform", g.transform);
+    var unit = h / 150;
+    svg.setAttribute("viewBox", vb.join(" "));
+    svg.setAttribute("width", String(vb[2] * unit * ppu));
+    svg.setAttribute("height", String(vb[3] * unit * ppu));
+    path.setAttribute("fill", item.color || ctx.fg);
+    svg.appendChild(path);
+    return svg;
+  }
+
+  // ---------------------------------------------------------------- symbols
+
+  // A library symbol ("symbol": "<library>/<id>"): its view box and filled parts ("currentColor" is the legend color).
+  function symbolOf(ref) {
+    var parts = String(ref || "").split("/");
+    var lib = LIBS[parts[0]];
+    return (lib && lib.def.symbols && lib.def.symbols[parts.slice(1).join("/")]) || null;
+  }
+
+  // Box proportions, from the MUTCD's boxed symbols: border width, outer corner radius, and the square the symbol
+  // fits in, per unit of the box's size.
+  var SYMBOL_BOX = { border: 0.0209, radius: 0.0626, inner: 0.7084 };
+
+  function roundRect(x, y, w, h, r) {
+    return "M" + (x + r) + " " + y + "H" + (x + w - r) + "A" + r + " " + r + " 0 0 1 " + (x + w) + " " + (y + r) +
+      "V" + (y + h - r) + "A" + r + " " + r + " 0 0 1 " + (x + w - r) + " " + (y + h) +
+      "H" + (x + r) + "A" + r + " " + r + " 0 0 1 " + x + " " + (y + h - r) +
+      "V" + (y + r) + "A" + r + " " + r + " 0 0 1 " + (x + r) + " " + y + "Z";
+  }
+
+  // A symbol as tall as the part, or ("box": { ... }) centered in a square box that tall, with an optional
+  // "background" (none by default) and border ("border": false hides it; "borderColor", the legend color by default).
+  // A symbol whose library is missing leaves its space empty.
+  function renderSymbol(item, ctx) {
+    var h = item.height || DEFAULTS.shieldHeight;
+    var ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    var sym = symbolOf(item.symbol);
+    var color = item.color || ctx.fg;
+    var vb = sym && sym.viewBox && sym.viewBox.length === 4 ? sym.viewBox : [0, 0, 100, 100];
+    var rotation = ((Number(item.rotation) || 0) % 360 + 360) % 360;
+    var drawParts = function (parent) {
+      ((sym && sym.parts) || []).forEach(function (p) {
+        var path = document.createElementNS(ns, "path");
+        path.setAttribute("d", p.d);
+        path.setAttribute("fill", p.fill === "currentColor" ? color : p.fill);
+        if (p.transform) path.setAttribute("transform", p.transform);
+        if (p.rule) path.setAttribute("fill-rule", p.rule);
+        parent.appendChild(path);
+      });
+    };
+    if (!item.box) {
+      var quarterTurn = rotation === 90 || rotation === 270;
+      var outW = quarterTurn ? vb[3] : vb[2], outH = quarterTurn ? vb[2] : vb[3];
+      var w = sym ? h * outW / outH : h;
+      svg.setAttribute("viewBox", rotation ? [0, 0, outW, outH].join(" ") : vb.join(" "));
+      svg.setAttribute("width", String(w * ppu));
+      svg.setAttribute("height", String(h * ppu));
+      if (rotation) {
+        var turned = document.createElementNS(ns, "g");
+        turned.setAttribute("transform", "translate(" + outW / 2 + " " + outH / 2 + ") rotate(" + rotation + ") translate(" + -(vb[0] + vb[2] / 2) + " " + -(vb[1] + vb[3] / 2) + ")");
+        drawParts(turned);
+        svg.appendChild(turned);
+      } else drawParts(svg);
+      return svg;
+    }
+    svg.setAttribute("viewBox", "0 0 " + h + " " + h);
+    svg.setAttribute("width", String(h * ppu));
+    svg.setAttribute("height", String(h * ppu));
+    var r = h * SYMBOL_BOX.radius, b = h * SYMBOL_BOX.border;
+    var shape = function (d, fill, rule) {
+      var e = document.createElementNS(ns, "path");
+      e.setAttribute("d", d);
+      e.setAttribute("fill", fill);
+      if (rule) e.setAttribute("fill-rule", rule);
+      svg.appendChild(e);
+    };
+    var box = item.box;
+    if (box.background) shape(roundRect(0, 0, h, h, r), box.background);
+    if (box.border !== false) shape(roundRect(0, 0, h, h, r) + roundRect(b, b, h - b * 2, h - b * 2, r - b), box.borderColor || color, "evenodd");
+    var k = h * SYMBOL_BOX.inner / Math.max(vb[2], vb[3]);
+    var g = document.createElementNS(ns, "g");
+    g.setAttribute("transform", "translate(" + (h / 2 - (vb[0] + vb[2] / 2) * k) + " " + (h / 2 - (vb[1] + vb[3] / 2) * k) + ") scale(" + k + ")");
+    if (rotation) {
+      var icon = document.createElementNS(ns, "g");
+      icon.setAttribute("transform", "translate(" + (vb[0] + vb[2] / 2) + " " + (vb[1] + vb[3] / 2) + ") rotate(" + rotation + ") translate(" + -(vb[0] + vb[2] / 2) + " " + -(vb[1] + vb[3] / 2) + ")");
+      drawParts(icon);
+      g.appendChild(icon);
+    } else drawParts(g);
+    svg.appendChild(g);
+    return svg;
+  }
+
+  // ---------------------------------------------------------------- diagrams and message boards
+
+  // Road Sign Factory exports are stored in the Hong Kong theme as paths and their original transforms.
+  // Each variant supplies its own approach and roundel; the side roads reuse exported SVG arrow artwork.
+  function renderHongKongRoundabout(item, ctx) {
+    var artwork = T.def.roundaboutSvg || {};
+    var subtype = item.roundaboutSubtype === "Spiral" ? "Spiral" : "Conventional";
+    var roundel = ["Normal", "Auxiliary", "U-turn"].indexOf(item.roundelShape) >= 0 ? item.roundelShape : "Normal";
+    var variant = artwork.variants && artwork.variants[subtype] && artwork.variants[subtype][roundel];
+    if (!variant) {
+      var error = el("div", "sb-error");
+      error.textContent = "Hong Kong roundabout artwork missing";
+      return error;
+    }
+    var ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    var fg = item.color || ctx.fg;
+    var center = variant.center;
+    // The exported viewBox includes a sample side road. Bound only the artwork in use.
+    var bounds = variant.bodyBounds;
+    var vb = variant.viewBox;
+    var x0 = bounds ? bounds[0] : vb[0], y0 = bounds ? bounds[1] : vb[1];
+    var x1 = bounds ? bounds[2] : vb[0] + vb[2], y1 = bounds ? bounds[3] : vb[1] + vb[3];
+    var addPath = function (part, extraTransform) {
+      if (!part || !part.d) return;
+      var path = document.createElementNS(ns, "path");
+      path.setAttribute("d", part.d);
+      path.setAttribute("fill", part.fill === "#e00000" ? "#e00000" : fg);
+      var transform = (extraTransform ? extraTransform + " " : "") + "translate(" + (part.x || 0) + " " + (part.y || 0) + ")";
+      path.setAttribute("transform", transform);
+      svg.appendChild(path);
+    };
+    addPath(variant.base);
+    var roads = item.sideRoads;
+    if (!Array.isArray(roads)) {
+      var old = { left: ["left",90], "up-left": ["left",45], up: ["right",0], "up-right": ["right",45], right: ["right",90] };
+      roads = (item.exits || ["left", "right"]).map(function (direction) {
+        var mapped = old[direction];
+        return mapped && { side: mapped[0], angle: mapped[1], shape: "Arrow", width: 4 };
+      }).filter(Boolean);
+    }
+    roads.forEach(function (road) {
+      if (!road) return;
+      var side = road.side === "top" ? 0 : road.side === "left" ? -1 : 1;
+      var angle = side === 0 ? 0 : Math.max(0, Math.min(90, Number(road.angle) || 0));
+      var width = Math.max(2, Math.min(12, Number(road.width) || 4));
+      var shape = ["Arrow", "Stub", "RedBar"].indexOf(road.shape) >= 0 ? road.shape : "Arrow";
+      if (shape === "Arrow") {
+        // The exported left-hand road already includes the curved join specific to each roundel type.
+        var sample = artwork.sideExamples && artwork.sideExamples[subtype];
+        var sampleCenter = artwork.variants[subtype].Normal.center;
+        var rotation = side === 0 ? 90 : side < 0 ? 90 - angle : 90 + angle;
+        var transform = "translate(" + center[0] + " " + center[1] + ") rotate(" + rotation +
+          ") scale(1 " + (width / 4) + ") translate(" + (-sampleCenter[0]) + " " + (-sampleCenter[1]) + ")";
+        addPath(sample, transform);
+      } else {
+        // Stub and RedBar use the corresponding Road Sign Factory SVG paths, including the red cap.
+        var tip = artwork.tips && artwork.tips[shape] || [];
+        var sourceX = shape === "Stub" ? -6.5491 : -2.8455;
+        var sourceBase = shape === "Stub" ? 228.0202 : 276.1662;
+        var ringRadius = subtype === "Spiral" ? 350 : 300;
+        var transformTip = "translate(" + center[0] + " " + center[1] + ") rotate(" + (side * angle) +
+          ") translate(0 " + (-(ringRadius - 20)) + ") scale(" + (width / 6) + " 0.65) translate(" +
+          (-sourceX) + " " + (-sourceBase) + ")";
+        tip.forEach(function (part) { addPath(part, transformTip); });
+      }
+      var reach = shape === "RedBar" ? 760 : 640;
+      var radians = angle * Math.PI / 180;
+      var cx = center[0] + side * Math.sin(radians) * reach;
+      var cy = center[1] - Math.cos(radians) * reach;
+      var pad = width * 25;
+      x0 = Math.min(x0, cx - pad); x1 = Math.max(x1, cx + pad);
+      y0 = Math.min(y0, cy - pad); y1 = Math.max(y1, cy + pad);
+    });
+    addPath(variant.ring);
+    (variant.extra ? [].concat(variant.extra) : []).forEach(function (part) { addPath(part); });
+    var size = item.height || DEFAULTS.arrowHeight * 2.2;
+    var w = x1 - x0, h = y1 - y0;
+    svg.setAttribute("viewBox", [x0, y0, w, h].join(" "));
+    svg.setAttribute("width", String(w / h * size * ppu));
+    svg.setAttribute("height", String(size * ppu));
+    return svg;
+  }
+  // A road diagram (the arrow of a diagrammatic sign): a wide through arrow with dashed lane lines and a branch
+  // curving off (exit left / right), a fork, or a roundabout with its exits. Drawn as filled shapes (lane lines are
+  // separate dashes in the background color), sized by its height. An exit's "sharedLanes" (0 or 1) is how many of
+  // its lanes are also through lanes (an option lane); the others are exit-only lanes beside the through lanes that
+  // end at the exit. Without it every exit lane is drawn from the through lanes, as diagrams were first drawn.
+  function renderDiagram(item, ctx) {
+    if (T.def.id === "hk" && item.shape === "roundabout") return renderHongKongRoundabout(item, ctx);
+    if (T.def.id === "hk" && item.shape === "fork") {
+      // The fork in the Arrow picker is the same artwork used by Hong Kong diagrams.
+      return renderArrow({ direction: "fork", style: "lane", height: item.height, color: item.color }, ctx);
+    }
+    var hkDiagram = T.def.id === "hk" && T.def.diagramSvg && T.def.diagramSvg[item.shape];
+    if (hkDiagram) {
+      var hkSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      var hkPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      var hkBox = hkDiagram.viewBox;
+      var hkHeight = item.height || DEFAULTS.arrowHeight * 2.2;
+      hkSvg.setAttribute("viewBox", hkBox.join(" "));
+      hkSvg.setAttribute("width", String(hkHeight * hkBox[2] / hkBox[3] * ppu));
+      hkSvg.setAttribute("height", String(hkHeight * ppu));
+      hkPath.setAttribute("d", hkDiagram.d);
+      hkPath.setAttribute("fill", item.color || ctx.fg);
+      hkSvg.appendChild(hkPath);
+      return hkSvg;
+    }
+    var L = 14, headLen = 25, headOver = 11;
+    var fg = item.color || ctx.fg, gapColor = ctx.bg;
+    var shapes = [], dashes = [];
+    var shape = item.shape || "exit-left";
+    var rect = function (x, y, w, h) { return [[x, y], [x + w, y], [x + w, y + h], [x, y + h]]; };
+    // An arrowhead at <e> pointing along <d>. Its base reaches a little back into the shaft, so no seam of
+    // background shows between them (anti-aliased edges that only touch leave a faint line).
+    var head = function (e, d, half) {
+      var n = [-d[1], d[0]], back = 0.8, len = lengthFor(half);
+      var b = [e[0] - d[0] * back, e[1] - d[1] * back];
+      return [[b[0] + n[0] * half, b[1] + n[1] * half], [e[0] + d[0] * len, e[1] + d[1] * len], [b[0] - n[0] * half, b[1] - n[1] * half]];
+    };
+    // Arrowheads for three lanes or more grow with them, wider and longer (a fixed size looked squeezed on a wide
+    // branch, its lane lines running into it). One and two lanes keep theirs.
+    var halfFor = function (lanes) { return lanes * L / 2 + headOver + Math.max(0, lanes - 2) * L * 0.3; };
+    var lengthFor = function (half) { return headLen * (1 + Math.max(0, half / halfFor(2) - 1) * 0.5); };
+    // A library's arrowhead (the first of the theme's libraries that has one; the MUTCD's: a rounded tip, rounded
+    // corners and a back edge swept slightly back from the shaft), else a plain triangle. Its outline as (back from
+    // the tip, across) per unit of half-width, ending where the back edge leaves the side; the back edge then runs at
+    // "backSlope" and meets a shaft <shaftHalf> wide at headBack().
+    var libHead = null;
+    themeLibs().forEach(function (l) { if (!libHead && !l.only && l.lib.diagramHead) libHead = l.lib.diagramHead; });
+    var mutcd = !!libHead;
+    var HEAD = mutcd ? libHead.outline : [];
+    var BACK = HEAD[HEAD.length - 1] || [0, 0], SLOPE = mutcd ? libHead.backSlope || 0 : 0;
+    var headBack = function (half, shaftHalf) { return (BACK[0] - (BACK[1] - shaftHalf / half) * SLOPE) * half; };
+    // A MUTCD arrowhead pointing along <d> from a shaft that ends at <e>, its tip where the plain arrowhead's is (so
+    // diagrams keep their size). A head longer than that reaches back over the shaft's end; a shorter one brings a
+    // piece of shaft to meet it. Either way it ends one unit into the shaft, so no seam shows.
+    var mutcdHead = function (e, d, half, shaftHalf) {
+      var n = [-d[1], d[0]], hb = headBack(half, shaftHalf), len = lengthFor(half);
+      var tip = [e[0] + d[0] * len, e[1] + d[1] * len];
+      var pt = function (back, across) { return [tip[0] - d[0] * back + n[0] * across, tip[1] - d[1] * back + n[1] * across]; };
+      var side = HEAD.map(function (p) { return [p[0] * half, p[1] * half]; }).concat([[hb, shaftHalf], [Math.max(hb, len) + 1, shaftHalf]]);
+      return side.map(function (p) { return pt(p[0], p[1]); }).concat(side.slice(1).reverse().map(function (p) { return pt(p[0], -p[1]); }));
+    };
+    var dash = function (cx, cy, dx, dy) {
+      // A dash 8 long and 2 wide centered on (cx, cy) along (dx, dy).
+      var nx = -dy, ny = dx;
+      dashes.push([[cx - dx * 4 + nx, cy - dy * 4 + ny], [cx + dx * 4 + nx, cy + dy * 4 + ny], [cx + dx * 4 - nx, cy + dy * 4 - ny], [cx - dx * 4 - nx, cy - dy * 4 - ny]]);
+    };
+    if (shape === "roundabout") {
+      // Ring around (0, 0), entry from below, an arm with an arrowhead per exit.
+      var R = 32, band = 11;
+      for (var k = 0; k < 40; k++) {
+        var a0 = k / 40 * Math.PI * 2, a1 = (k + 1.15) / 40 * Math.PI * 2;
+        shapes.push([[Math.cos(a0) * (R - band / 2), Math.sin(a0) * (R - band / 2)], [Math.cos(a0) * (R + band / 2), Math.sin(a0) * (R + band / 2)],
+          [Math.cos(a1) * (R + band / 2), Math.sin(a1) * (R + band / 2)], [Math.cos(a1) * (R - band / 2), Math.sin(a1) * (R - band / 2)]]);
+      }
+      shapes.push(rect(-band / 2, R, band, 50));
+      var angles = { left: Math.PI, up: -Math.PI / 2, right: 0, "up-left": -Math.PI * 3 / 4, "up-right": -Math.PI / 4 };
+      (item.exits || ["left", "up", "right"]).forEach(function (exit) {
+        var a = angles[exit];
+        if (a == null) return;
+        var d = [Math.cos(a), Math.sin(a)], n = [-d[1], d[0]];
+        var s0 = R, s1 = R + band / 2 + 20;
+        shapes.push([[d[0] * s0 + n[0] * band / 2, d[1] * s0 + n[1] * band / 2], [d[0] * s1 + n[0] * band / 2, d[1] * s1 + n[1] * band / 2],
+          [d[0] * s1 - n[0] * band / 2, d[1] * s1 - n[1] * band / 2], [d[0] * s0 - n[0] * band / 2, d[1] * s0 - n[1] * band / 2]]);
+        shapes.push(mutcd ? mutcdHead([d[0] * s1, d[1] * s1], d, band / 2 + headOver - 2, band / 2)
+          : head([d[0] * s1, d[1] * s1], d, band / 2 + headOver - 2));
+      });
+    } else {
+      var fork = shape === "fork";
+      var exitLanes = Math.max(1, Math.round(item.exitLanes || 1));
+      // A fork's branches: "lanesLeft" and "lanesRight", sharing one lane (an option lane) when "sharedLanes" is 1, so
+      // the lanes before it are their sum less the shared one. Forks made before these settings have "exitLanes" on
+      // each side, from the edges of their "lanes".
+      var split = fork && item.lanesLeft != null;
+      var forkLeft = split ? Math.max(1, Math.round(item.lanesLeft)) : exitLanes;
+      var forkRight = split ? Math.max(1, Math.round(item.lanesRight != null ? item.lanesRight : item.lanesLeft)) : exitLanes;
+      var lanes = split ? forkLeft + forkRight - Math.min(1, Math.max(0, Math.round(item.sharedLanes || 0)))
+        : Math.max(1, Math.round(item.lanes || 2));
+      var sw = lanes * L, sx = -sw / 2, bottom = 150, top = 0;
+      // The through arrow's tip is at the top; with a MUTCD head the shaft starts where the head's back edge meets it.
+      var throughHalf = halfFor(lanes), throughLen = lengthFor(throughHalf);
+      var throughBack = mutcd ? Math.max(throughLen, headBack(throughHalf, sw / 2)) : throughLen;
+      var shaftTop = fork ? 75 : top + throughBack;
+      // Exit-only lanes (exits only): beside the through lanes, from the bottom up to where the exit leaves.
+      var exitOnly = fork || item.sharedLanes == null ? 0 : Math.max(0, exitLanes - Math.min(1, Math.max(0, Math.round(item.sharedLanes))));
+      shapes.push(rect(sx, shaftTop, sw, bottom - shaftTop));
+      if (!fork) shapes.push(mutcd ? mutcdHead([0, top + throughLen], [0, -1], throughHalf, sw / 2) : head([0, shaftTop], [0, -1], throughHalf));
+      for (var lane = 1; lane < lanes; lane++) {
+        for (var y = bottom - 7; y > shaftTop + 6; y -= 15) dash(sx + lane * L, y, 0, -1);
+      }
+      var sides = shape === "exit-right" ? [1] : shape === "exit-left" ? [-1] : [-1, 1];
+      sides.forEach(function (side) {
+        var branchLanes = fork ? (side < 0 ? forkLeft : forkRight) : exitLanes;
+        // A fork's branches bend on one radius (the wider one's), so their arrowheads end level.
+        var bw = branchLanes * L, Rc = 46 + (fork ? Math.max(forkLeft, forkRight) * L : bw), sweep = 1.15;
+        var cy = fork ? shaftTop + 4 : 122;
+        if (exitOnly > 0) {
+          var ow = exitOnly * L, ox = side < 0 ? sx - ow : sx + sw;
+          // One unit into the through lanes and the branch, so no seam shows where they meet.
+          shapes.push(rect(side < 0 ? ox : ox - 1, cy - 1, ow + 1, bottom - cy + 1));
+          // Lane lines between the exit-only lanes and along the through lanes' edge: dashed, except a solid line
+          // between exit-only and through lanes when no exit lane is shared.
+          for (var ol = 0; ol < exitOnly; ol++) {
+            var lx = side < 0 ? sx - ol * L : sx + sw + ol * L;
+            if (ol === 0 && exitOnly === exitLanes) dashes.push(rect(lx - 1, cy - 1, 2, bottom - cy + 1));
+            else for (var oy = bottom - 7; oy > cy; oy -= 15) dash(lx, oy, 0, -1);
+          }
+        }
+        // The branch leaves the edge of the lanes below it going up, then bends off to its side.
+        var startX = side < 0 ? sx - exitOnly * L + bw / 2 : sx + sw + exitOnly * L - bw / 2;
+        var cx = startX + side * Rc;
+        var at = function (phi, r) { return [cx - side * r * Math.cos(phi), cy + r * Math.sin(phi)]; };
+        var outer = [], inner = [];
+        for (var k2 = 0; k2 <= 14; k2++) {
+          var phi = -sweep * k2 / 14;
+          outer.push(at(phi, Rc + bw / 2));
+          inner.push(at(phi, Rc - bw / 2));
+        }
+        shapes.push(outer.concat(inner.reverse()));
+        var end = at(-sweep, Rc);
+        var d = [side * Math.sin(sweep), -Math.cos(sweep)];
+        var branchHalf = halfFor(branchLanes);
+        shapes.push(mutcd ? mutcdHead(end, d, branchHalf, bw / 2) : head(end, d, branchHalf));
+        // How far the head reaches back over the curve: lane lines stop short of it.
+        var headOverCurve = mutcd ? Math.max(0, headBack(branchHalf, bw / 2) - lengthFor(branchHalf)) : 0;
+        for (var bl = 1; bl < branchLanes; bl++) {
+          var r = Rc - bw / 2 + bl * L;
+          // Along the curve: five even steps, or, below exit-only lanes, on from their dashes every 15 units.
+          var steps = [];
+          if (exitOnly > 0) { for (var sd = 9; sd < r * sweep * 0.82; sd += 15) steps.push(-sd / r); }
+          else { for (var k3 = 1; k3 < 5; k3++) steps.push(-sweep * (k3 / 5)); }
+          steps.forEach(function (ph) {
+            // Not under the arrowhead (a dash is 8 long: half of it either side).
+            if (r * (sweep + ph) < headOverCurve + 4) return;
+            var p0 = at(ph, r), p1 = at(ph - 0.01, r);
+            var len = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]) || 1;
+            dash(p0[0], p0[1], (p1[0] - p0[0]) / len, (p1[1] - p0[1]) / len);
+          });
+        }
+      });
+    }
+    var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    shapes.forEach(function (poly) { poly.forEach(function (pt) { x0 = Math.min(x0, pt[0]); y0 = Math.min(y0, pt[1]); x1 = Math.max(x1, pt[0]); y1 = Math.max(y1, pt[1]); }); });
+    var h = item.height || DEFAULTS.arrowHeight * 2.2;
+    var unit = h / (y1 - y0);
+    var ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", [x0, y0, x1 - x0, y1 - y0].join(" "));
+    svg.setAttribute("width", String((x1 - x0) * unit * ppu));
+    svg.setAttribute("height", String(h * ppu));
+    var draw = function (poly, color) {
+      var path = document.createElementNS(ns, "path");
+      path.setAttribute("d", "M" + poly.map(function (pt) { return pt[0].toFixed(2) + " " + pt[1].toFixed(2); }).join(" L") + " Z");
+      path.setAttribute("fill", color);
+      svg.appendChild(path);
+    };
+    shapes.forEach(function (poly) { draw(poly, fg); });
+    dashes.forEach(function (poly) { draw(poly, gapColor); });
+    return svg;
+  }
+
+  // An LED display: lines of pixel lettering on a black panel (a variable message sign, or a price display inside a
+  // sign).
+  function renderMessage(item, ctx) {
+    var h = item.height || DEFAULTS.textHeight * 0.8;
+    var color = item.color || LED_COLOR;
+    var box = el("div", "sb-message", {
+      display: "flex", flexDirection: "column", alignItems: { start: "flex-start", end: "flex-end" }[item.align] || "center",
+      backgroundColor: item.background || "#0b0b0b", padding: px(h * 0.35) + " " + px(h * 0.5),
+    });
+    (item.lines && item.lines.length ? item.lines : [""]).forEach(function (line, i) {
+      var t = ledText(line, h, color);
+      if (i > 0) t.style.marginTop = px(h * 0.4);
+      box.appendChild(t);
+    });
+    return box;
+  }
+
+  // Height used for spacing rules: legend (letter) height, not the full height of shields or
+  // arrows. MUTCD spacing is expressed in terms of letter heights, so a 36" shield next to 16"
+  // legends must not inflate the gaps and margins.
+  function spacingHeight(item) {
+    if (!item) return 0;
+    switch (item.type) {
+      case "text": return item.height || DEFAULTS.textHeight;
+      case "shield": return Math.min((item.height || DEFAULTS.shieldHeight) * 0.45, DEFAULTS.textHeight);
+      case "symbol": return Math.min((item.height || DEFAULTS.shieldHeight) * 0.45, DEFAULTS.textHeight);
+      case "arrow": return Math.min(arrowHeightOf(item) * 0.6, DEFAULTS.textHeight);
+      case "minutes": return Math.min(item.height || DEFAULTS.textHeight * 0.5, DEFAULTS.textHeight);
+      case "exit": return Math.min((item.height || 22) * 0.5, DEFAULTS.textHeight);
+      case "row":
+      case "column":
+      case "panel":
+      case "chip":
+      case "tab":
+        var h = 0;
+        (item.items || []).forEach(function (c) { if (!isTab(c)) h = Math.max(h, spacingHeight(c)); });
+        return h;
+      default: return 0;
+    }
+  }
+
+  // Tabs sit on top of the sign; panels are bands across its full width (at the top, between parts or at the
+  // bottom, like an EXIT ONLY panel), or with "side": "left" / "right" down its full height on that edge (the black
+  // HOV diamond panel). Both are top-level parts the sign lays out itself.
+  function isTab(item) { return !!item && (item.type === "tab" || ((item.type === "minutes" || item.type === "exit") && item.position === "tab")); }
+  function isPanel(item) { return !!item && item.type === "panel"; }
+  function isSidePanel(item) { return isPanel(item) && (item.side === "left" || item.side === "right"); }
+  function inBody(item) { return !isTab(item) && !isPanel(item); }
+
+  // <only>: indices of <item>.items to draw (a stretch of the sign's body between panels); all when absent.
+  function renderContainer(item, ctx, horizontal, path, only) {
+    var e = el("div", horizontal ? "sb-row" : "sb-stack");
+    var align = { start: "flex-start", left: "flex-start", center: "center", end: "flex-end", right: "flex-end" }[item.align || (horizontal ? "center" : "start")];
+    // A spread-out row ("between") fills the width of its column and puts the space between its parts; an "even"
+    // row fills it too and centers each part in an equal share of it (dividers keep their own width).
+    var spread = horizontal && (item.justify === "between" || item.justify === "even");
+    if (horizontal) e.style.justifyContent = item.justify === "between" ? "space-between" : "flex-start";
+    if (spread) e.style.alignSelf = "stretch";
+    e.style.alignItems = align;
+    var items = item.items || [];
+    var previous = null;
+    var even = horizontal && item.justify === "even";
+    var last = null;
+    items.forEach(function (child, i) {
+      if (only && only.indexOf(i) < 0) return;
+      if (isTab(child)) return;
+      var c = renderItem(child, ctx, path == null ? null : (path === "" ? String(i) : path + "." + i), horizontal);
+      if (!c) return;
+      // A part in a column can override the column's alignment ("place": start, center or end).
+      if (!horizontal && child.place) c.style.alignSelf = { start: "flex-start", center: "center", end: "flex-end" }[child.place] || "auto";
+      var gap = 0;
+      if (previous) {
+        // Gap between neighbors, scaled from the larger legend height of the pair.
+        var ref = Math.max(spacingHeight(previous), spacingHeight(child));
+        gap = child.gapBefore != null ? child.gapBefore
+          : item.gap != null ? item.gap
+          : ref * (horizontal ? DEFAULTS.itemGap : DEFAULTS.lineGap);
+        if (!horizontal && T.def.id === "hk" && previous.type === "text" && child.type === "text" &&
+            !/[\u3400-\u9fff]/.test(previous.text || "") && /[\u3400-\u9fff]/.test(child.text || ""))
+          gap *= DEFAULTS.bilingualGapScale || 1;
+      }
+      // A part's own margin ({ top, right, bottom, left } in sign units) adds to the gap before it.
+      var m = child.margin || {};
+      c.style.marginTop = px((horizontal ? 0 : gap) + (m.top || 0));
+      c.style.marginLeft = px((horizontal ? gap : 0) + (m.left || 0));
+      c.style.marginBottom = px(m.bottom || 0);
+      c.style.marginRight = px((c.sbMarginRight || 0) + (m.right || 0));
+      // The part's own margin in layout pixels (the editor's selection outline includes it).
+      c.sbMargin = { top: (m.top || 0) * ppu, right: (m.right || 0) * ppu, bottom: (m.bottom || 0) * ppu, left: (m.left || 0) * ppu };
+      previous = child;
+      if (even) {
+        var right = 0;
+        if (child.type !== "divider") {
+          var cell = el("div", null, {
+            // Content width plus an equal share of the spare width: never narrower than its part, so a sign laid
+            // out at its natural width does not collapse the cells.
+            flexGrow: "1", flexShrink: "0", flexBasis: "auto", display: "flex", flexDirection: "row",
+            justifyContent: "center", alignItems: align,
+          });
+          c.style.marginLeft = px(m.left || 0);
+          cell.appendChild(c);
+          c = cell;
+        } else {
+          c.style.marginLeft = px(gap / 2 + (m.left || 0));
+          right = (c.sbMarginRight || 0) + (m.right || 0);
+        }
+        // Half the gap on this side, half on the previous part's side.
+        if (child.type !== "divider") c.style.marginLeft = px(gap / 2);
+        if (last && gap) last.el.style.marginRight = px(last.right + gap / 2);
+        last = { el: c, right: right };
+      }
+      e.appendChild(c);
+    });
+    return e;
+  }
+
+  // <inRow>: the item sits in a row (a divider there is a vertical line between columns).
+  function renderItem(item, ctx, path, inRow) {
+    var e;
+    switch (item && item.type) {
+      case "text": e = renderText(item, ctx); break;
+      case "shield": e = renderShield(item, ctx); break;
+      case "symbol": e = renderSymbol(item, ctx); break;
+      case "arrow": e = renderArrow(item, ctx); break;
+      case "row":
+        e = renderContainer(item, ctx, true, path);
+        // A spread-out row in another row (a panel's parts) takes the width left there: stretching only reaches across.
+        if (inRow && (item.justify === "between" || item.justify === "even")) e.style.flexGrow = "1";
+        break;
+      case "column": e = renderContainer(item, ctx, false, path); break;
+      case "chip": e = renderChip(item, ctx, path); break;
+      case "diagram": e = renderDiagram(item, ctx); break;
+      case "led": e = renderMessage(item, ctx); break;
+      case "minutes": e = renderMinutesPanel(item, ctx); break;
+      case "exit": e = renderTab(item, ctx, path, { bg: ctx.bg, fg: ctx.fg }, DEFAULTS.border, DEFAULTS.cornerRadius); break;
+      // A panel inside a row or column fills it (only the sign's own panels reach its edges).
+      case "panel": e = renderPanel(item, ctx, path); e.style.alignSelf = "stretch"; break;
+      case "spacer": e = el("div", null, { width: px(item.width || 0), height: px(item.height || 0) }); break;
+      case "divider":
+        if (T.def.id === "hk") {
+          e = renderHongKongDivider(item, ctx, inRow);
+          break;
+        }
+        var thickness = px(item.thickness || DEFAULTS.border);
+        var dividerColor = item.color || ctx.fg;
+        var dashed = item.lineStyle === "dashed";
+        e = el("div", null, inRow
+          ? { alignSelf: "stretch", width: dashed ? "0px" : thickness,
+              borderLeft: dashed ? thickness + " dashed " + dividerColor : "none",
+              backgroundColor: dashed ? "transparent" : dividerColor }
+          : { alignSelf: "stretch", height: dashed ? "0px" : thickness,
+              borderTop: dashed ? thickness + " dashed " + dividerColor : "none",
+              backgroundColor: dashed ? "transparent" : dividerColor });
+        break;
+      default: return null;
+    }
+    return tag(e, path);
+  }
+
+  // Hong Kong's lane line has 8sw marks and 4sw gaps. Stack borders reserve their
+  // place here; a second pass draws them edge-to-edge over the completed board.
+  // sw is one quarter of the theme's standard legend height.
+  function renderHongKongDivider(item, ctx, inRow) {
+    var sw = DEFAULTS.textHeight / 4;
+    var color = item.color || ctx.fg;
+    var lane = item.lineStyle === "dashed";
+    var short = item.lineStyle === "short" || (ctx.flagBoard && inRow);
+    var e = el("div", null, {
+      alignSelf: "stretch", flexShrink: "0", overflow: "hidden", position: "relative",
+      margin: px(1.5 * sw) + " " + px(2.5 * sw),
+      width: inRow ? px((lane ? 3 : 1) * sw) : "auto",
+      height: inRow ? "auto" : px((lane ? 3 : 1) * sw),
+    });
+    if (!lane) {
+      if (short) e.style.backgroundColor = color;
+      else {
+        e.sbFullDivider = { axis: inRow ? "vertical" : "horizontal", color: color, thickness: sw * ppu };
+      }
+      return e;
+    }
+    // Positioned marks do not add their combined length to the row's intrinsic height.
+    for (var i = 0; i < 40; i++) {
+      var mark = el("div", null, {
+        position: "absolute", backgroundColor: color,
+        top: inRow ? px(i * 12 * sw) : "0px",
+        left: inRow ? "0px" : px(i * 12 * sw),
+        width: inRow ? "100%" : px(8 * sw),
+        height: inRow ? px(8 * sw) : "100%",
+      });
+      e.appendChild(mark);
+    }
+    return e;
+  }
+
+  // Colors of a chip, panel or tab: its scheme (or custom colors), else the sign's legend and background swapped.
+  function boxColors(item, ctx) {
+    var s = item.scheme ? scheme(item.scheme) : { bg: ctx.fg, fg: ctx.bg };
+    return { bg: item.background || s.bg, fg: item.foreground || s.fg };
+  }
+
+  // A small colored box with its own parts inside (a route patch, a TOLL or speed plate): it sets the background
+  // and the legend color of everything in it. "span": "full" makes it as wide as its column.
+  function renderChip(item, ctx, path) {
+    var c = boxColors(item, ctx);
+    var h = spacingHeight(item) || DEFAULTS.textHeight;
+    var pad = item.padding != null ? item.padding : h * 0.3;
+    var last = item;
+    while (last.items && last.items.length) last = last.items[last.items.length - 1];
+    var cjkBottom = last.type === "text" && /[\u3400-\u9fff]/.test(last.text || "") ? h * 0.15 : 0;
+    var inner = renderContainer({ type: item.vertical ? "column" : "row", items: item.items || [], align: item.align }, { font: ctx.font, fg: c.fg, bg: c.bg, led: ctx.led, flagBoard: ctx.flagBoard }, !item.vertical, path);
+    var e = el("div", "sb-chip", {
+      display: "flex", flexDirection: "row", backgroundColor: c.bg,
+      padding: px(pad * 0.7) + " " + px(pad) + " " + px(pad * 0.7 + cjkBottom) + " " + px(pad),
+      borderRadius: px(item.radius != null ? item.radius : h * 0.15),
+    });
+    if (item.border) e.style.border = px(item.borderWidth != null ? item.borderWidth : DEFAULTS.border) + " solid " + (item.border === true ? c.fg : item.border);
+    if (item.span === "full") {
+      e.style.alignSelf = "stretch";
+      e.style.justifyContent = { start: "flex-start", end: "flex-end" }[item.align] || "center";
+    }
+    e.appendChild(inner);
+    return e;
+  }
+
+  // Road Sign Factory JTIS symbol: 22 x 15 units, 1-unit white frame and a 13-unit LED field.
+  // The same item can sit in the body or above the board as a tab.
+  function renderMinutesPanel(item, ctx) {
+    var h = item.height || DEFAULTS.textHeight * 0.5;
+    var u = h / 6;
+    var outer = el("div", "sb-minutes", {
+      display: "flex", flexDirection: "row", alignItems: "stretch", flexShrink: "0",
+      width: px(22 * u), height: px(15 * u), boxSizing: "border-box",
+      backgroundColor: "#303030", border: px(u) + " solid #ffffff",
+      borderRadius: px(1.5 * u), overflow: "hidden",
+    });
+    var display = el("div", null, {
+      display: "flex", alignItems: "center", justifyContent: "center", flexGrow: "1",
+      width: px(13 * u), minWidth: "0px", backgroundColor: "#000000", overflow: "hidden",
+    });
+    var digits = ledText(String(item.minutes != null ? item.minutes : "12"), h, item.color || LED_COLOR);
+    digits.style.maxWidth = "90%";
+    display.appendChild(digits);
+    outer.appendChild(display);
+    var legend = el("div", null, {
+      display: "flex", flexDirection: "column", alignItems: "flex-start", justifyContent: "flex-end",
+      width: px(7 * u), boxSizing: "border-box", flexShrink: "0", overflow: "hidden",
+      backgroundColor: "#303030", padding: "0px " + px(0.25 * u) + " " + px(0.7 * u),
+    });
+    legend.appendChild(renderText({ type: "text", text: "mins", height: 2.565 * u, font: "HK Transport Medium" }, { font: ctx.font, fg: "#ffffff", bg: "#303030", led: false }));
+    legend.appendChild(renderText({ type: "text", text: "分鐘", height: 2.1 * u, font: "Source Han Sans HK Bold" }, { font: ctx.font, fg: "#ffffff", bg: "#303030", led: false }));
+    outer.appendChild(legend);
+    return outer;
+  }
+
+  // A band across the sign with its own parts in a row (an EXIT ONLY panel). Empty, it still shows as a strip so
+  // parts can be dropped into it. <corners>: which of the sign's rounded corners it sits in ("top", "bottom").
+  function renderPanel(item, ctx, path, corners, innerRadius) {
+    var c = boxColors(item, ctx);
+    var h = heightOf(item) || DEFAULTS.textHeight;
+    var pad = item.padding != null ? item.padding : h * 0.35;
+    var e = el("div", "sb-band", {
+      backgroundColor: c.bg, padding: px(pad) + " " + px(pad * 2),
+      display: "flex", flexDirection: "row", justifyContent: { start: "flex-start", end: "flex-end" }[item.align] || "center",
+    });
+    if (!(item.items || []).length) e.style.minHeight = px(DEFAULTS.textHeight * 0.9);
+    if (corners && corners.top) {
+      e.style.borderTopLeftRadius = px(corners.topLeft === false ? 0 : innerRadius);
+      e.style.borderTopRightRadius = px(corners.topRight === false ? 0 : innerRadius);
+    }
+    if (corners && corners.bottom) {
+      e.style.borderBottomLeftRadius = px(corners.bottomLeft === false ? 0 : innerRadius);
+      e.style.borderBottomRightRadius = px(corners.bottomRight === false ? 0 : innerRadius);
+    }
+    var gap = item.gap != null ? item.gap : (spacingHeight(item) || h) * 0.75;
+    var inner = renderContainer({ type: "row", items: item.items || [], gap: gap }, { font: ctx.font, fg: c.fg, bg: c.bg, led: ctx.led, flagBoard: ctx.flagBoard }, true, path);
+    // The parts fill the band (so a spread-out row in it has room to spread), aligned as the panel says.
+    inner.style.flexGrow = "1";
+    inner.style.justifyContent = { start: "flex-start", end: "flex-end" }[item.align] || "center";
+    e.appendChild(inner);
+    return e;
+  }
+
+  // A tab on top of the sign (an exit number plaque): the sign's colors and border, open at the bottom.
+  function renderTab(item, ctx, path, s, border, radius) {
+    if (item.type === "minutes") {
+      var monitor = renderMinutesPanel(item, ctx);
+      var monitorOffset = item.offset != null ? item.offset : DEFAULTS.textHeight * 0.375;
+      if (item.align === "right") monitor.style.marginRight = px(monitorOffset);
+      else if (item.align !== "center") monitor.style.marginLeft = px(monitorOffset);
+      return tag(monitor, path);
+    }
+    var c = item.scheme ? scheme(item.scheme) : s;
+    var h = spacingHeight(item) || 10;
+    if (T.def.id === "hk") {
+      var sw = DEFAULTS.textHeight / 4;
+      var frame = el("div", "sb-tab", {
+        backgroundColor: "#ffffff", padding: px(0.5 * sw),
+        borderRadius: "0px", flexShrink: "0",
+      });
+      var offset = item.position === "tab" || item.type === "tab"
+        ? (item.offset != null ? item.offset : 1.5 * sw) : 0;
+      if (item.align === "right") frame.style.marginRight = px(offset);
+      else if (item.align !== "center") frame.style.marginLeft = px(offset);
+      var plaque = el("div", "sb-tab-inner", {
+        backgroundColor: "#000000", color: "#ffffff", borderRadius: "0px",
+        padding: px(0.5 * sw), display: "flex", flexDirection: "row", alignItems: "center", whiteSpace: "nowrap",
+      });
+      var fontHK = (T.def.exitTab && T.def.exitTab.font) || ctx.font;
+      var tabContext = { font: fontHK, fg: "#ffffff", bg: "#000000", led: ctx.led, flagBoard: ctx.flagBoard };
+      var parts = item.type === "exit" ? (item.exitStyle === "small"
+        ? [{ type: "text", text: String(item.number != null ? item.number : "8"), height: item.height || 22, font: "HK Transport Heavy" }]
+        : [
+          { type: "symbol", symbol: "hk/exit", height: (item.height || 22) * 0.95 },
+          { type: "text", text: String(item.number != null ? item.number : "8"), height: item.height || 22, font: "HK Transport Heavy" }
+        ]) : item.items || [];
+      var small = item.exitStyle === "small";
+      if (!small && parts.length > 1) {
+        var labels = renderContainer({ type: "column", items: parts.slice(0, -1), align: "center", gap: 0 }, tabContext, false, path);
+        labels.style.flexShrink = "0";
+        plaque.appendChild(labels);
+      }
+      var number = renderContainer({ type: "row", items: parts.slice(-1), align: "center" }, tabContext, true, path);
+      number.style.flexShrink = "0";
+      number.style.position = "relative";
+      number.style.top = px(-0.5 * sw);
+      number.style.marginLeft = small ? "0px" : px(0.5 * sw);
+      number.style.padding = px(0.2 * sw) + " " + px(0.5 * sw) + " 0px";
+      plaque.appendChild(number);
+      frame.appendChild(plaque);
+      return tag(frame, path);
+    }
+    var box = el("div", "sb-tab", {
+      backgroundColor: c.bg, padding: px(border) + " " + px(border) + " 0px " + px(border),
+      borderTopLeftRadius: px(radius), borderTopRightRadius: px(radius),
+    });
+    var inner = el("div", "sb-tab-inner", {
+      borderStyle: "solid", borderColor: c.fg,
+      borderTopWidth: px(border), borderLeftWidth: px(border), borderRightWidth: px(border), borderBottomWidth: "0px",
+      borderTopLeftRadius: px(radius - border), borderTopRightRadius: px(radius - border),
+      padding: px(h * 0.45) + " " + px(h * 0.7) + " " + px(h * 0.45) + " " + px(h * 0.7),
+    });
+    var font = (T.def.exitTab && T.def.exitTab.font) || ctx.font;
+    inner.appendChild(renderContainer({ type: "row", items: item.items || [], align: "center" }, { font: font, fg: c.fg, bg: c.bg, led: ctx.led, flagBoard: ctx.flagBoard }, true, path));
+    box.appendChild(inner);
+    return tag(box, path);
+  }
+
+  // A panel down one side of the sign, its full height: its parts stacked and centered in it. <round>: its outer
+  // corners { top, bottom } follow the border's inner edge (not under a tab).
+  function renderSidePanel(item, ctx, path, round, innerRadius) {
+    var c = boxColors(item, ctx);
+    var h = heightOf(item) || DEFAULTS.textHeight;
+    var pad = item.padding != null ? item.padding : h * 0.35;
+    var e = el("div", "sb-band", {
+      backgroundColor: c.bg, padding: px(pad), display: "flex", flexDirection: "column", justifyContent: "center",
+    });
+    if (!(item.items || []).length) e.style.minWidth = px(DEFAULTS.textHeight * 0.9);
+    var left = item.side === "left";
+    if (round.top) e.style[left ? "borderTopLeftRadius" : "borderTopRightRadius"] = px(innerRadius);
+    if (round.bottom) e.style[left ? "borderBottomLeftRadius" : "borderBottomRightRadius"] = px(innerRadius);
+    e.appendChild(renderContainer({ type: "column", items: item.items || [], align: item.align || "center" },
+      { font: ctx.font, fg: c.fg, bg: c.bg, led: ctx.led, flagBoard: ctx.flagBoard }, false, path));
+    return e;
+  }
+
+  // Minimum sign width for "at least N lanes", at the default 70% sign size less a little clearance: highway lanes
+  // (the theme's lane width, 4 m) or the narrower lanes of local roads (3 m).
+  function laneWidth(kind) {
+    var lane = kind === "local" ? 3 / 0.0254 : (T.def.laneWidth || 4 / 0.0254);
+    return (lane / 0.7) * 0.92;
+  }
+
+  // A pointed board is an SVG face behind the ordinary sign contents. Keeping the SVG in normal
+  // panel bounds gives the baker a transparent alpha cutout for the physical panel shape.
+  function pointedFace(bg, fg, left, border, radius, arrowThickness) {
+    var ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 1000 500");
+    svg.setAttribute("preserveAspectRatio", "none");
+    svg.style.position = "absolute";
+    svg.style.left = "0px";
+    svg.style.top = "0px";
+    svg.style.width = "100%";
+    svg.style.height = "100%";
+    svg.style.zIndex = "0";
+    var group = document.createElementNS(ns, "g");
+    if (T.def.id === "hk") {
+      var face = document.createElementNS(ns, "path");
+      face.setAttribute("fill", bg);
+      face.setAttribute("stroke", fg);
+      face.setAttribute("stroke-linejoin", "round");
+      var chevron = document.createElementNS(ns, "path");
+      chevron.setAttribute("fill", fg);
+      group.appendChild(face);
+      group.appendChild(chevron);
+      svg.appendChild(group);
+      // Use the panel's measured dimensions as SVG units. The outer stroke then has the same
+      // thickness on the horizontal, vertical and diagonal edges of a wide or narrow flag.
+      svg.sbDrawFlag = function (w, h) {
+        if (!(w > 0 && h > 0)) return;
+        // The outer rim is thicker; the inner chevron keeps its previous width.
+        var chevronReference = Math.max(1, 1.5 * border * ppu);
+        var sw = chevronReference * 1.5;
+        var o = sw / 2 + 0.5;
+        var r = Math.max(sw, Math.min(radius * ppu, h * 0.12));
+        // Compact direction flags have a short pointer: the full-height depth
+        // used by gantry signs makes their chevron dominate the legend.
+        var compact = h <= DEFAULTS.textHeight * ppu * 4;
+        var depth = Math.min(h * (compact ? 0.35 : 0.92), w * 0.28);
+        var shoulder = w - depth, right = w - o, bottom = h - o, mid = h / 2;
+        var turn = Math.min(r, depth * 0.16);
+        var tipTurn = compact ? Math.min(r * 0.5, depth * 0.25) : turn * 0.5;
+        var d = "M" + (o + r) + " " + o + " H" + (shoulder - turn) +
+          " Q" + shoulder + " " + o + " " + (shoulder + turn * 0.5) + " " + (o + turn * 0.5) +
+          " L" + (right - tipTurn) + " " + (mid - tipTurn) +
+          " Q" + right + " " + mid + " " + (right - tipTurn) + " " + (mid + tipTurn) +
+          " L" + (shoulder + turn * 0.5) + " " + (bottom - turn * 0.5) +
+          " Q" + shoulder + " " + bottom + " " + (shoulder - turn) + " " + bottom +
+          " H" + (o + r) + " Q" + o + " " + bottom + " " + o + " " + (bottom - r) +
+          " V" + (o + r) + " Q" + o + " " + o + " " + (o + r) + " " + o + " Z";
+        // Anchor the outer chevron edge; increasing thickness moves only its
+        // inner edge toward the text (left for a right flag, right for a left flag).
+        var stripeWidth = Math.max(chevronReference * 2, h * 0.12) * arrowThickness;
+        var tipGap = 2.5 * sw;
+        var tipOuter = right - tipGap;
+        var tipInner = tipOuter - stripeWidth;
+        var stripeTop = 2 * sw + 0.5, stripeBottom = h - stripeTop;
+        // The chevron's diagonal follows the same rise/run as the flag's outer edge.
+        var edgeX = shoulder + turn * 0.5, edgeY = o + turn * 0.5;
+        var baseOuter = edgeX + (stripeTop - edgeY) * (right - edgeX) / (mid - edgeY) - tipGap;
+        var baseInner = baseOuter - stripeWidth;
+        svg.setAttribute("viewBox", "0 0 " + w + " " + h);
+        svg.setAttribute("preserveAspectRatio", "none");
+        group.setAttribute("transform", left ? "translate(" + w + " 0) scale(-1 1)" : "");
+        face.setAttribute("d", d);
+        face.setAttribute("stroke-width", String(sw));
+        chevron.setAttribute("d", "M" + baseInner + " " + stripeTop + " H" + baseOuter +
+          " L" + tipOuter + " " + mid + " L" + baseOuter + " " + stripeBottom +
+          " H" + baseInner + " L" + tipInner + " " + mid + " Z");
+        // Keep the content clear of the entire arrow, including the chevron's base.
+        return w - baseInner;
+      };
+      return svg;
+    }
+    if (left) group.setAttribute("transform", "translate(1000 0) scale(-1 1)");
+    var face = document.createElementNS(ns, "path");
+    face.setAttribute("d", "M35 0 H805 Q825 0 838 18 L990 232 Q1004 250 990 268 L838 482 Q825 500 805 500 H35 Q0 500 0 465 V35 Q0 0 35 0 Z");
+    face.setAttribute("fill", bg);
+    group.appendChild(face);
+    var line = document.createElementNS(ns, "path");
+    line.setAttribute("d", "M40 20 H795 Q810 20 820 35 L962 238 Q970 250 962 262 L820 465 Q810 480 795 480 H40 Q20 480 20 460 V40 Q20 20 40 20 Z");
+    line.setAttribute("fill", "none");
+    line.setAttribute("stroke", fg);
+    line.setAttribute("stroke-width", "9");
+    group.appendChild(line);
+    svg.appendChild(group);
+    return svg;
+  }
+
+  // Stack borders cross the content margin and meet the sign's white frame. At each
+  // end, white corner wedges round the adjacent blue panels into the frame.
+  function drawHongKongFullDividers(inner, panel, border) {
+    var placeholders = [];
+    var walk = function (node) {
+      if (node.sbFullDivider) placeholders.push(node);
+      for (var i = 0; i < node.children.length; i++) walk(node.children[i]);
+    };
+    walk(inner);
+    if (!placeholders.length) return;
+    var ns = "http://www.w3.org/2000/svg";
+    var overlay = document.createElementNS(ns, "svg");
+    overlay.setAttribute("class", "sb-full-dividers");
+    overlay.style.position = "absolute";
+    overlay.style.left = "0px";
+    overlay.style.top = "0px";
+    overlay.style.width = "100%";
+    overlay.style.height = "100%";
+    overlay.style.zIndex = "2";
+    overlay.style.pointerEvents = "none";
+    overlay.setAttribute("preserveAspectRatio", "none");
+    var paths = placeholders.map(function (placeholder) {
+      var path = document.createElementNS(ns, "path");
+      path.setAttribute("fill", placeholder.sbFullDivider.color);
+      overlay.appendChild(path);
+      return path;
+    });
+    panel.appendChild(overlay);
+    var update = function () {
+      var frame = panel.getBoundingClientRect();
+      var w = panel.offsetWidth || frame.width, h = panel.offsetHeight || frame.height;
+      if (!(w > 0 && h > 0 && frame.width > 0 && frame.height > 0)) return;
+      var sx = w / frame.width, sy = h / frame.height;
+      var side = border * ppu * 2;
+      var corner = DEFAULTS.textHeight / 4 * 1.5 * ppu;
+      // Percent sizing follows the panel's content box in Gameface and stops short
+      // of its right/bottom padding. Explicit pixels cover the full outer frame.
+      overlay.style.width = w + "px";
+      overlay.style.height = h + "px";
+      overlay.setAttribute("viewBox", "0 0 " + w + " " + h);
+      placeholders.forEach(function (placeholder, i) {
+        var info = placeholder.sbFullDivider;
+        var rect = placeholder.getBoundingClientRect();
+        var t = info.thickness;
+        var d = "";
+        if (info.axis === "horizontal") {
+          var y = ((rect.top + rect.bottom) / 2 - frame.top) * sy;
+          var y0 = y - t / 2, y1 = y + t / 2;
+          var r = Math.max(0, Math.min(corner, y0 - side, h - side - y1, w / 4));
+          d = "M0 " + y0 + " H" + w + " V" + y1 + " H0Z";
+          if (r > 0) {
+            d += "M" + side + " " + (y0 - r) + "V" + y0 + "H" + (side + r) + "Q" + side + " " + y0 + " " + side + " " + (y0 - r) + "Z";
+            d += "M" + (w - side) + " " + (y0 - r) + "V" + y0 + "H" + (w - side - r) + "Q" + (w - side) + " " + y0 + " " + (w - side) + " " + (y0 - r) + "Z";
+            d += "M" + side + " " + (y1 + r) + "V" + y1 + "H" + (side + r) + "Q" + side + " " + y1 + " " + side + " " + (y1 + r) + "Z";
+            d += "M" + (w - side) + " " + (y1 + r) + "V" + y1 + "H" + (w - side - r) + "Q" + (w - side) + " " + y1 + " " + (w - side) + " " + (y1 + r) + "Z";
+          }
+        } else {
+          var x = ((rect.left + rect.right) / 2 - frame.left) * sx;
+          var x0 = x - t / 2, x1 = x + t / 2;
+          var vr = Math.max(0, Math.min(corner, x0 - side, w - side - x1, h / 4));
+          d = "M" + x0 + " 0H" + x1 + "V" + h + "H" + x0 + "Z";
+          if (vr > 0) {
+            d += "M" + (x0 - vr) + " " + side + "H" + x0 + "V" + (side + vr) + "Q" + x0 + " " + side + " " + (x0 - vr) + " " + side + "Z";
+            d += "M" + (x1 + vr) + " " + side + "H" + x1 + "V" + (side + vr) + "Q" + x1 + " " + side + " " + (x1 + vr) + " " + side + "Z";
+            d += "M" + (x0 - vr) + " " + (h - side) + "H" + x0 + "V" + (h - side - vr) + "Q" + x0 + " " + (h - side) + " " + (x0 - vr) + " " + (h - side) + "Z";
+            d += "M" + (x1 + vr) + " " + (h - side) + "H" + x1 + "V" + (h - side - vr) + "Q" + x1 + " " + (h - side) + " " + (x1 + vr) + " " + (h - side) + "Z";
+          }
+        }
+        paths[i].setAttribute("d", d);
+      });
+    };
+    update();
+    requestAnimationFrame(function () { update(); requestAnimationFrame(update); });
+    if (document.fonts && document.fonts.ready && typeof document.fonts.ready.then === "function")
+      document.fonts.ready.then(update);
+  }
+
+  function renderSign(doc) {
+    useTheme(doc);
+    // Custom colors ("background" / "foreground" as CSS colors) override the scheme.
+    var base = scheme(doc.scheme);
+    var s = { bg: doc.background || base.bg, fg: doc.foreground || base.fg };
+    // A message board: a black LED panel in a dark frame; its legends are lit pixel lettering.
+    var led = doc.board === "led";
+    if (led) s = { bg: "#0b0b0b", fg: doc.foreground || LED_COLOR };
+    var frame = led ? "#3c3f44" : s.fg;
+    var border = doc.border != null ? doc.border : DEFAULTS.border;
+    // Message boards are square boxes.
+    var radius = led ? 0 : doc.cornerRadius != null ? doc.cornerRadius : DEFAULTS.cornerRadius;
+    var items = doc.items || [];
+    var legend = spacingHeight({ type: "column", items: items.filter(inBody) }) || DEFAULTS.textHeight;
+    var margin = doc.margin != null ? doc.margin : legend * DEFAULTS.margin;
+    var ctx = { font: doc.font || DEFAULTS.font, fg: s.fg, bg: s.bg, led: led,
+      flagBoard: doc.shape === "arrow-left" || doc.shape === "arrow-right" };
+    var minWidth = doc.minLanes ? doc.minLanes * laneWidth(doc.laneKind) : doc.minWidth;
+
+    var sign = el("div", "sb-sign");
+
+    // Tabs, grouped by side: left, center, right. Nested plaques still belong
+    // above the board; this also keeps older saved Column/JTIS designs working.
+    var sides = { left: [], center: [], right: [] };
+    var collectTabs = function (parts, prefix) {
+      parts.forEach(function (item, i) {
+        var path = prefix ? prefix + "." + i : String(i);
+        if (isTab(item)) sides[{ left: "left", start: "left", center: "center" }[item.align] || "right"].push(renderTab(item, ctx, path, s, border, radius));
+        else if (item.items) collectTabs(item.items, path);
+      });
+    };
+    collectTabs(items, "");
+    if (sides.left.length + sides.center.length + sides.right.length > 0) {
+      var tabRow = el("div", "sb-tab-row", { justifyContent: "flex-start", alignItems: "flex-end" });
+      var spacer = function () { return el("div", null, { flexGrow: "1" }); };
+      sides.left.forEach(function (t) { tabRow.appendChild(t); });
+      tabRow.appendChild(spacer());
+      sides.center.forEach(function (t) { tabRow.appendChild(t); });
+      tabRow.appendChild(spacer());
+      sides.right.forEach(function (t) { tabRow.appendChild(t); });
+      sign.appendChild(tabRow);
+    }
+
+    var panel = el("div", "sb-panel", {
+      backgroundColor: led ? frame : T.def.id === "hk" ? s.fg : s.bg, padding: px(border),
+      borderRadius: px(radius),
+    });
+    // The corner under a tab at the sign's edge is square.
+    if (T.def.id !== "hk") {
+      if (sides.right.length) panel.style.borderTopRightRadius = "0px";
+      if (sides.left.length) panel.style.borderTopLeftRadius = "0px";
+    }
+    if (doc.width) panel.style.width = px(doc.width - border * 2);
+    if (minWidth) panel.style.minWidth = px(minWidth - border * 2);
+
+    var pointedLeft = !led && doc.shape === "arrow-left";
+    var pointedRight = !led && doc.shape === "arrow-right";
+    var flagFace = null;
+    if (pointedLeft || pointedRight) {
+      panel.style.backgroundColor = "transparent";
+      panel.style.borderRadius = "0px";
+      flagFace = pointedFace(s.bg, s.fg, pointedLeft, border, radius,
+        Math.max(0.25, Number(doc.flagArrowThickness) || 1));
+      panel.appendChild(flagFace);
+    }
+
+    var innerRadius = Math.max(radius - border, 0);
+    var inner = el("div", "sb-panel-inner", {
+      borderStyle: "solid", borderColor: frame, borderWidth: px(border), borderRadius: px(innerRadius),
+    });
+    if (pointedLeft || pointedRight) {
+      // The absolutely positioned flag face otherwise paints over normal-flow symbols and SVG diagrams.
+      inner.style.position = "relative";
+      inner.style.zIndex = "1";
+      inner.style.borderStyle = "none";
+      inner.style.borderRadius = "0px";
+      // Transparent padding takes the place of the ordinary sign's inner border.
+      inner.style.padding = px(border);
+      var tipRoom = Math.max(DEFAULTS.textHeight * (T.def.id === "hk" ? 3.5 : 2.5), 30);
+      if (pointedLeft) inner.style.paddingLeft = px(tipRoom + border);
+      else inner.style.paddingRight = px(tipRoom + border);
+    }
+    if (T.def.id !== "hk") {
+      if (sides.right.length) inner.style.borderTopRightRadius = "0px";
+      if (sides.left.length) inner.style.borderTopLeftRadius = "0px";
+    }
+    if (led || (T.def.id === "hk" && !pointedLeft && !pointedRight)) inner.style.backgroundColor = s.bg;
+
+    // Side panels run down the sign's edges; the rest of it goes between them.
+    var sideLeft = [], sideRight = [];
+    items.forEach(function (item, i) { if (isSidePanel(item)) (item.side === "left" ? sideLeft : sideRight).push(i); });
+    var body = inner;
+    if (sideLeft.length || sideRight.length) {
+      inner.style.flexDirection = "row";
+      body = el("div", "sb-stack", { flexGrow: "1" });
+    }
+    var sidePanel = function (i) {
+      var left = items[i].side === "left";
+      var round = { top: !(left ? sides.left : sides.right).length, bottom: true };
+      return tag(renderSidePanel(items[i], ctx, String(i), round, Math.max(innerRadius - border, 0)), String(i));
+    };
+    sideLeft.forEach(function (i) { inner.appendChild(sidePanel(i)); });
+    if (body !== inner) inner.appendChild(body);
+    sideRight.forEach(function (i) { inner.appendChild(sidePanel(i)); });
+
+    // The body runs in stretches between panels; each stretch has the sign's margin around it.
+    var drawn = [];
+    items.forEach(function (item, i) { if (!isTab(item) && !isSidePanel(item)) drawn.push(i); });
+    var stretch = [];
+    var first = true;
+    var flush = function () {
+      if (!stretch.length) return;
+      var content = renderContainer({ type: "column", items: items, align: doc.align || "start" }, ctx, false, "", stretch);
+      content.style.padding = px(margin);
+      if (doc.height && first) content.style.minHeight = px(doc.height - border * 4 - margin * 2);
+      body.appendChild(content);
+      stretch = [];
+      first = false;
+    };
+    drawn.forEach(function (i, k) {
+      if (!isPanel(items[i])) { stretch.push(i); return; }
+      flush();
+      // Corners against a side panel are square.
+      var corners = {
+        top: k === 0, bottom: k === drawn.length - 1,
+        topLeft: !sides.left.length && !sideLeft.length, topRight: !sides.right.length && !sideRight.length,
+        bottomLeft: !sideLeft.length, bottomRight: !sideRight.length,
+      };
+      // The panel sits inside the legend border, so its corners follow that border's inner edge.
+      body.appendChild(tag(renderPanel(items[i], ctx, String(i), corners, Math.max(innerRadius - border, 0)), String(i)));
+      first = false;
+    });
+    flush();
+    panel.appendChild(inner);
+    sign.appendChild(panel);
+    if (T.def.id === "hk" && tabRow) {
+      // Two different-sized plaques share one baseline. If together they are
+      // wider than the face, widen the face so neither hangs past its edge.
+      var fitPlaques = function () {
+        var needed = tabRow.scrollWidth || 0;
+        if (needed > (panel.offsetWidth || 0)) panel.style.minWidth = needed + "px";
+      };
+      fitPlaques();
+      requestAnimationFrame(fitPlaques);
+      if (document.fonts && document.fonts.ready && typeof document.fonts.ready.then === "function")
+        document.fonts.ready.then(fitPlaques);
+    }
+    if (T.def.id === "hk") drawHongKongFullDividers(inner, panel, border);
+    if (flagFace && flagFace.sbDrawFlag) {
+      var updateFlag = function () {
+        var side = pointedLeft ? "paddingLeft" : "paddingRight";
+        // Reclaim space from a compact pointer before measuring the natural
+        // width, while retaining the original clearance on larger signs.
+        if (T.def.id === "hk" && (panel.offsetHeight || panel.getBoundingClientRect().height) <= DEFAULTS.textHeight * ppu * 4)
+          inner.style[side] = px(DEFAULTS.textHeight * 2.5 + border);
+        // Reserving space can widen an automatic sign, which moves its arrow farther out.
+        // Re-measure until the content edge is outside the chevron at the final width.
+        for (var pass = 0; pass < 12; pass++) {
+          var box = panel.getBoundingClientRect();
+          var reserve = flagFace.sbDrawFlag(panel.offsetWidth || box.width, panel.offsetHeight || box.height);
+          if (!(reserve > 0)) return;
+          var needed = Math.ceil(reserve + border * ppu + 1);
+          if (needed <= (parseFloat(inner.style[side]) || 0)) break;
+          inner.style[side] = needed + "px";
+        }
+        var finalBox = panel.getBoundingClientRect();
+        flagFace.sbDrawFlag(panel.offsetWidth || finalBox.width, panel.offsetHeight || finalBox.height);
+      };
+      updateFlag();
+      requestAnimationFrame(function () { updateFlag(); requestAnimationFrame(updateFlag); });
+      if (document.fonts && document.fonts.ready && typeof document.fonts.ready.then === "function")
+        document.fonts.ready.then(updateFlag);
+    }
+    if (glowOnly) sign.style.visibility = "hidden";
+    return sign;
+  }
+
+  // Public API, shared by the bake page and the in-game editor preview.
+  window.SignRenderer = {
+    // Returns a detached element for the design. options.annotate tags elements with data-sb-path.
+    render: function (doc, pixelsPerInch, options) {
+      ppi = pixelsPerInch || 3;
+      annotate = !!(options && options.annotate);
+      try { return renderSign(doc || {}); } finally { annotate = false; }
+    },
+    registerTheme: registerTheme,
+    registerLibrary: registerLibrary,
+    themes: THEMES,
+    libraries: LIBS,
+    // The arrow styles a theme offers, or those of the library <library> (an arrow borrowing it), for the editor:
+    // [{ id, label, title, perRow, directions, box }]. <box> is a square that fits every direction of the style (so
+    // its icons share one scale). <formatVersion> is no longer used (every design draws with the theme's arrows).
+    arrowStyles: function (themeId, formatVersion, library) {
+      useTheme({ theme: themeId });
+      var borrowed = library && LIBS[library] ? library : null;
+      return arrowCategories(borrowed).map(function (c) {
+        var directions = c.order.filter(function (d) { return c.ways[d]; });
+        var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+        directions.forEach(function (d) {
+          var v = arrowGeometry(c.id === "standard" ? "" : c.id, d, borrowed).viewBox;
+          x0 = Math.min(x0, v[0]); y0 = Math.min(y0, v[1]); x1 = Math.max(x1, v[0] + v[2]); y1 = Math.max(y1, v[1] + v[3]);
+        });
+        var size = Math.max(x1 - x0, y1 - y0);
+        return {
+          id: c.id === "standard" ? "" : c.id, label: c.label, title: c.title, perRow: c.perRow, directions: directions,
+          box: [(x0 + x1) / 2 - size / 2, (y0 + y1) / 2 - size / 2, size, size],
+        };
+      });
+    },
+    // One arrow's outline in a theme (or borrowed from <library>): { d, transform, viewBox }.
+    arrowGeometry: function (themeId, style, direction, formatVersion, library) {
+      useTheme({ theme: themeId });
+      return arrowGeometry(style, direction, library);
+    },
+    // The theme's own symbol libraries (no arrow-only entries), most important first.
+    symbolLibraries: function (themeId) {
+      useTheme({ theme: themeId });
+      return themeLibs().filter(function (l) { return !l.only && l.lib.symbols; }).map(function (l) { return l.lib.id; });
+    },
+  };
+
+  // <glow>: draw only what is lit at night (LED lettering), laid out exactly like the sign itself.
+  window.hsRender = function (doc, pixelsPerInch, glow) {
+    ppi = pixelsPerInch || 3;
+    var root = document.getElementById("root");
+    while (root.firstChild) root.removeChild(root.firstChild);
+    glowOnly = !!glow;
+    try {
+      root.appendChild(renderSign(doc || {}));
+      window.hsLastError = null;
+    } catch (e) {
+      window.hsLastError = String(e && e.stack || e);
+      var err = el("div", "sb-error");
+      err.textContent = "Render error: " + window.hsLastError;
+      root.appendChild(err);
+    } finally {
+      glowOnly = false;
+    }
+    window.hsRenderCount = (window.hsRenderCount || 0) + 1;
+  };
+
+  // URL form: renderer.html#<ppi>|<url-encoded JSON>. Used by the game as a fallback when
+  // ExecuteScript does not repaint, and handy for previewing in a desktop browser.
+  function renderFromHash() {
+    if (location.hash.length <= 1) return;
+    try {
+      // Gameface percent-encodes the whole hash (including the "|"), browsers do not: decode first.
+      var body = decodeURIComponent(location.hash.substring(1));
+      var bar = body.indexOf("|");
+      var scale = bar > 0 ? parseFloat(body.substring(0, bar)) : 3;
+      window.hsRender(JSON.parse(bar > 0 ? body.substring(bar + 1) : body), scale);
+    } catch (e) {
+      window.hsLastError = "hash: " + e;
+    }
+  }
+  renderFromHash();
+  window.addEventListener("hashchange", renderFromHash);
+})();
+

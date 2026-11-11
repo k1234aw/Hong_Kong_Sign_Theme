@@ -1,0 +1,25 @@
+Hong Kong theme artwork and font sources
+
+NotoSansHK-VF.ttf: Noto Sans HK, Copyright 2014-2021 Adobe, with Reserved Font Name 'Source'.
+Licensed under the SIL Open Font License 1.1; see fonts/OFL.txt.
+Source: https://github.com/google/fonts/tree/main/ofl/notosanshk
+The bundled file was copied from the local Windows Noto Sans HK installation.
+
+SourceHanSansHC-Bold.otf: Source Han Sans Hong Kong Bold, Copyright 2014-2025 Adobe, with Reserved Font Name 'Source'.
+Licensed under the SIL Open Font License 1.1; see fonts/OFL-SourceHanSans.txt.
+Source: https://github.com/adobe-fonts/source-han-sans/tree/release/OTF/TraditionalChineseHK
+Used as the default Chinese font. The Hong Kong TPDM names this family for pedestrian wayfinding; vehicular direction signs specify Avector BlackBold.
+
+TransportMedium.woff and TransportHeavy.woff were copied from TrafficSign-master/TrafficSign-master/public/font.
+TransportMedium.ttf and TransportHeavy.ttf contain the same fonts converted from those WOFF files for Gameface's TrueType font loader.
+Transport Medium and Transport Heavy are Crown copyright and contain public sector information licensed under the Open Government Licence v1.0.
+Source: https://github.com/G1213123/TrafficSign/tree/master/public/font
+
+The Hong Kong stack and gantry arrows, selectable symbols, and route plate were redrawn from Road Sign Factory's geometry and the supplied references.
+The EXIT / 出 symbol in SignBuilderSymbols/hk/library.json is imported from app/design/lib/templates/symbolTemplate.js; the editable exit number is a separate sign part.
+The JTIS monitor proportions, white frame, black display field, and bilingual label follow the JTIS definition in app/design/lib/templates/symbolTemplate.js.
+The fixed left and right exit diagrams in theme.json use the LeftStraightArrow and RightStraightArrow polygons and arcs from the same symbolTemplate.js. The Diagram fork uses the fork arrow from the UK symbol library that the Hong Kong theme already includes.
+The LED renderer uses the bundled Source Han Sans Hong Kong font for Chinese and other characters outside its 5-by-7 Latin dot matrix when the Hong Kong theme is registered. Other themes fall back to the game's Noto Sans JP font.
+The six roundabout approach and roundel variants in theme.json were extracted from Road Sign Factory's public/images/roundabout*.svg files. The side roads use the exported example paths and public/images/arrow.svg, stub.svg, and redbar.svg, positioned and sized by the editor settings. Run import-hk-roundabout-svg.ps1 in the workspace to refresh the embedded path data from those SVG files.
+Source: https://github.com/G1213123/TrafficSign/tree/master/app/design/lib/templates
+The flag border, exit borders, and dividers were drawn from the supplied TPDM reference screenshots.

@@ -1,0 +1,15 @@
+/bin/
+/obj/
+/Library/
+/UI/node_modules/
+/UI/build/
+/.vs/
+*.user
+*.suo
+*.pdb
+
+# Reference and development assets excluded from the published add-on.
+/Resources/Renderer/preview.html
+/Resources/icon.svg
+/SignBuilderSymbols/hk/symbols/airport.svg
+/SignBuilderThemes/hk/fonts/*.woff

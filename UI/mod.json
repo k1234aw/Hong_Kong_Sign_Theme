@@ -1,0 +1,6 @@
+{
+    "id": "HKSignBuilderAddon",
+    "author": "K1234",
+    "version": "1.1.0",
+    "dependencies": ["SignBuilder"]
+}

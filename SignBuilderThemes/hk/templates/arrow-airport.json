@@ -1,0 +1,81 @@
+{
+  "formatVersion": 2,
+  "theme": "hk",
+  "id": "arrow-airport",
+  "name": "Right flag to Airport",
+  "shape": "arrow-right",
+  "scheme": "blue",
+  "align": "center",
+  "items": [
+    {
+      "type": "column",
+      "align": "center",
+      "gap": 5,
+      "items": [
+        {
+          "type": "text",
+          "text": "Hong Kong (W)",
+          "height": 16,
+          "font": "HK Transport Medium"
+        },
+        {
+          "type": "text",
+          "text": "香港（西）",
+          "height": 16,
+          "font": "Source Han Sans HK Bold"
+        }
+      ]
+    },
+    {
+      "type": "column",
+      "align": "center",
+      "gap": 5,
+      "items": [
+        {
+          "type": "text",
+          "text": "Lantau",
+          "height": 16,
+          "font": "HK Transport Medium"
+        },
+        {
+          "type": "text",
+          "text": "大嶼山",
+          "height": 16,
+          "font": "Source Han Sans HK Bold"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "align": "center",
+      "items": [
+        {
+          "type": "column",
+          "align": "center",
+          "gap": 5,
+          "items": [
+            {
+              "type": "text",
+              "text": "Airport",
+              "height": 16,
+              "font": "HK Transport Medium"
+            },
+            {
+              "type": "text",
+              "text": "機場",
+              "height": 16,
+              "font": "Source Han Sans HK Bold"
+            }
+          ]
+        },
+        {
+          "type": "symbol",
+          "symbol": "hk/airport",
+          "height": 25
+        }
+      ]
+    }
+  ],
+  "minWidth": 210
+}
+

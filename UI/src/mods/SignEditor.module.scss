@@ -1,0 +1,164 @@
+// Gameface supports a subset of CSS: flexbox works but `gap` does not, so spacing uses margins.
+.panel { width: 1180rem; }
+.body { position: relative; display: flex; flex-direction: row; align-items: stretch; padding: 8rem; height: 650rem; }
+.column { width: 280rem; display: flex; flex-direction: column; }
+.center { flex: 1; display: flex; flex-direction: column; align-items: center; margin: 0 12rem; }
+.heading { font-size: 14rem; font-weight: bold; color: rgba(255, 255, 255, 0.9); margin: 10rem 0 4rem 0; text-transform: uppercase; }
+.listItem, .listItemOn { padding: 4rem 8rem; margin-bottom: 2rem; font-size: 14rem; color: #fff; background-color: rgba(255, 255, 255, 0.06); border-radius: 3rem; }
+.listItem:hover { background-color: rgba(255, 255, 255, 0.15); }
+.listItemOn { background-color: rgba(255, 212, 0, 0.35); }
+.palette, .choices { display: flex; flex-direction: row; flex-wrap: wrap; }
+.palette, .choices { align-items: center; }
+.chip, .choice, .choiceOn { white-space: nowrap; }
+.chip, .choice, .choiceOn { padding: 3rem 8rem; margin: 0 4rem 4rem 0; font-size: 13rem; color: #fff; background-color: rgba(255, 255, 255, 0.1); border-radius: 3rem; }
+.chip:hover, .choice:hover { background-color: rgba(255, 255, 255, 0.22); }
+.choiceOn { background-color: rgba(80, 160, 255, 0.6); }
+.field { display: flex; flex-direction: column; margin-bottom: 6rem; }
+.label { font-size: 12rem; color: rgba(255, 255, 255, 0.7); margin-bottom: 2rem; }
+.input { font-size: 14rem; padding: 4rem 6rem; color: #fff; background-color: rgba(0, 0, 0, 0.35); border: 1rem solid rgba(255, 255, 255, 0.3); border-radius: 3rem; }
+.stepper { display: flex; flex-direction: row; align-items: center; }
+.step { width: 26rem; height: 22rem; line-height: 22rem; text-align: center; color: #fff; background-color: rgba(255, 255, 255, 0.12); border-radius: 3rem; }
+.stepValue { width: 72rem; text-align: center; color: #fff; font-size: 14rem; white-space: nowrap; }
+.preview { width: 560rem; height: 290rem; background-color: rgba(120, 140, 110, 0.6); border-radius: 4rem; display: flex; align-items: center; justify-content: center; }
+.hint { font-size: 12rem; color: rgba(255, 255, 255, 0.7); margin: 4rem 0; }
+.status { font-size: 13rem; color: #ffd400; margin: 6rem 0; }
+.actions { margin-top: 10rem; display: flex; flex-direction: row; }
+.compact { width: 460rem; }
+.compactBody { padding: 8rem 12rem; display: flex; flex-direction: column; align-items: center; }
+.flatLabel { padding: 4rem 12rem; font-size: 14rem; }
+.choice, .choiceOn { display: flex; flex-direction: row; align-items: center; }
+.swatch, .swatchOn { width: 34rem; height: 22rem; margin: 0 6rem 4rem 0; border-radius: 3rem; border: 2rem solid rgba(255, 255, 255, 0.25); }
+.swatchOn { border: 3rem solid #ffd400; }
+.optionRow { display: flex; flex-direction: row; justify-content: center; }
+.optionGroup { display: flex; flex-direction: column; align-items: center; margin: 0 10rem; }
+.barRow { display: flex; flex-direction: row; align-items: center; margin: 2rem 0; }
+.barLabel { font-size: 13rem; color: rgba(255, 255, 255, 0.75); margin-right: 8rem; }
+.barValue { min-width: 130rem; text-align: center; font-size: 14rem; color: #fff; white-space: nowrap; }
+.step { display: flex; align-items: center; justify-content: center; padding: 0 6rem; width: auto; min-width: 26rem; }
+.compact { width: 560rem; }
+.optionGroup .choices { flex-wrap: nowrap; }
+/* --- designer --- */
+.signOptions { display: flex; flex-direction: column; align-items: stretch; width: 560rem; margin-top: 6rem; }
+.optionsScroll { width: 580rem; height: 290rem; }
+.partsScroll { height: 610rem; }
+.customColors { display: flex; flex-direction: row; }
+.customColors > div { margin-right: 16rem; }
+.library { display: flex; flex-direction: column; }
+.libraryActions, .namingRow { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; margin-bottom: 6rem; }
+.cards { height: 430rem; }
+.cardRow { display: flex; flex-direction: row; align-items: flex-start; }
+.card { position: relative; width: 134rem; margin: 0 6rem 6rem 0; padding: 4rem; border-radius: 4rem; background-color: rgba(255, 255, 255, 0.06); }
+.card:hover { background-color: rgba(255, 255, 255, 0.16); }
+.thumb { width: 124rem; height: 64rem; background-color: rgba(120, 140, 110, 0.45); border-radius: 3rem; }
+.cardName { font-size: 12rem; color: #fff; margin: 3rem 14rem 2rem 0; }
+.cardMenu { position: absolute; right: 4rem; bottom: 2rem; font-size: 14rem; color: rgba(255, 255, 255, 0.8); padding: 0 4rem; }
+.cardActions { position: absolute; left: 0; right: 0; top: 0; display: flex; flex-direction: column; padding: 4rem; background-color: rgba(20, 24, 30, 0.95); border-radius: 4rem; }
+.grip { margin-right: 8rem; }
+.dropInside { background-color: rgba(255, 212, 0, 0.25); }
+.dragging { opacity: 0.5; }
+.hintInline { font-size: 11rem; color: rgba(255, 255, 255, 0.5); }
+/* --- arrangement --- */
+.arrange { width: 1480rem; }
+.arrangeBody { position: relative; padding: 6rem 12rem; display: flex; flex-direction: column; align-items: stretch; }
+.barGap { width: 18rem; }
+.barValueSmall { min-width: 60rem; text-align: center; font-size: 14rem; color: #fff; white-space: nowrap; }
+.diagram { position: relative; margin: 6rem 0 4rem 0; background-color: rgba(120, 150, 110, 0.35); border-radius: 4rem; overflow: hidden; }
+.deck { position: absolute; height: 26px; background-color: rgba(60, 62, 66, 0.95); }
+.lane, .laneOn, .laneOther { position: absolute; width: 36px; display: flex; flex-direction: row; align-items: center; justify-content: center; font-size: 12rem; color: rgba(255, 255, 255, 0.8); }
+.laneOther { opacity: 0.55; }
+.laneOn { color: #ffd400; font-weight: bold; }
+.laneLine { position: absolute; width: 2px; height: 26px; background-color: rgba(255, 255, 255, 0.6); }
+.laneLineCenter { position: absolute; width: 2px; height: 26px; background-color: #e8b923; }
+.beam { position: absolute; height: 6px; background-color: #b9bec4; }
+.post { position: absolute; width: 6px; background-color: #b9bec4; }
+.signBox, .signBoxOn { position: absolute; }
+.signBoxOn { box-shadow: 0px 0px 0px 3px #ffd400; }
+.listItem, .listItemOn { display: flex; flex-direction: row; align-items: center; }
+.barRow .choices { flex-wrap: nowrap; }
+.barRow { flex-wrap: wrap; }
+.primaryButton, .primaryButtonOff { padding: 6rem 18rem; margin-right: 10rem; font-size: 16rem; font-weight: bold; color: #fff; border-radius: 4rem; background-color: #1e9e5a; align-self: center; }
+.primaryButton:hover { background-color: #23b867; }
+.primaryButtonOff { background-color: rgba(255, 255, 255, 0.15); color: rgba(255, 255, 255, 0.5); }
+.inlineRow { display: flex; flex-direction: row; align-items: center; }
+.deckOther { position: absolute; height: 26px; background-color: rgba(60, 62, 66, 0.35); }
+.choiceRows { display: flex; flex-direction: column; align-items: flex-start; }
+.select { position: relative; width: 200rem; }
+.selectToggle { display: flex; flex-direction: row; align-items: center; padding: 4rem 8rem; font-size: 14rem; color: #fff; background-color: rgba(0, 0, 0, 0.35); border: 1rem solid rgba(255, 255, 255, 0.3); border-radius: 3rem; }
+.selectToggle:hover { background-color: rgba(255, 255, 255, 0.12); }
+.selectCaret { margin-left: 6rem; font-size: 12rem; }
+.selectMenu { margin-top: 2rem; padding: 3rem; background-color: rgba(24, 28, 34, 0.98); border: 1rem solid rgba(255, 255, 255, 0.25); border-radius: 3rem; z-index: 10; }
+.selectItem, .selectItemOn { padding: 4rem 8rem; font-size: 14rem; color: #fff; border-radius: 2rem; }
+.selectItem:hover { background-color: rgba(255, 255, 255, 0.15); }
+.selectItemOn { background-color: rgba(80, 160, 255, 0.5); }
+.searchRow { margin-bottom: 6rem; }
+.rowLabel { flex: 1; }
+.rowDelete { padding: 2rem 4rem; margin-left: 6rem; border-radius: 3rem; opacity: 0.6; }
+.rowDelete:hover { opacity: 1; background-color: rgba(220, 60, 60, 0.6); }
+.rowCopy { padding: 2rem 4rem; margin-left: 6rem; border-radius: 3rem; opacity: 0.6; }
+.rowCopy:hover { opacity: 1; background-color: rgba(80, 160, 255, 0.6); }
+.confirmShade { position: absolute; left: 0; top: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background-color: rgba(0, 0, 0, 0.55); }
+.confirmBox { display: flex; flex-direction: column; align-items: center; padding: 16rem 20rem; border-radius: 6rem; background-color: rgba(30, 36, 44, 0.98); }
+.confirmText { font-size: 15rem; color: #fff; margin-bottom: 12rem; }
+.dangerButton { padding: 5rem 14rem; margin-right: 10rem; font-size: 14rem; font-weight: bold; color: #fff; border-radius: 4rem; background-color: #b23a3a; }
+.dangerButton:hover { background-color: #cc4545; }
+/* Two sides to a row, sharing its width (the number boxes give way, not the - and + buttons). */
+.marginGrid { display: flex; flex-direction: column; align-self: stretch; }
+.marginGrid .inlineRow { align-self: stretch; }
+.marginSide { display: flex; flex-direction: row; align-items: center; flex: 1 1 0; min-width: 0; margin: 0 6rem 3rem 0; }
+.marginLabel { width: 40rem; flex-shrink: 0; font-size: 12rem; color: rgba(255, 255, 255, 0.7); }
+.marginSide .stepperCompact { flex: 1 1 0; min-width: 0; }
+.marginSide .stepValue { flex: 1 1 0; min-width: 0; margin: 0 2rem; }
+.marginSide .stepperCompact .numberInput { width: 100%; min-width: 0; }
+.marginSide .step { flex-shrink: 0; }
+.cardBadge { position: absolute; right: 26rem; bottom: 4rem; opacity: 0.7; }
+.stepperCompact { display: flex; flex-direction: row; align-items: center; }
+.stepperCompact .stepValue { width: auto; }
+.stepperCompact .numberInput { width: 48rem; }
+.stepperCompact .step { min-width: 22rem; padding: 0 3rem; }
+.selectVanilla { width: 100%; }
+.inlineRow .choices { flex-wrap: nowrap; }
+.placeAs { align-self: center; margin-right: 10rem; font-size: 14rem; color: rgba(255, 255, 255, 0.8); }
+.numberInput { width: 100%; text-align: center; color: #fff; font-size: 14rem; background-color: rgba(0, 0, 0, 0.3); border: 1rem solid rgba(255, 255, 255, 0.2); border-radius: 2rem; padding: 1rem 2rem; }
+.stepValue { display: flex; flex-direction: row; align-items: center; margin: 0 3rem; }
+/* --- own dialogs (positioned by CSS: in place from the first frame) --- */
+.dialog { position: relative; pointer-events: auto; border-radius: 10rem; background-color: rgba(30, 38, 50, 0.96); backdrop-filter: var(--panelBlur); color: #fff; }
+.dialogHeader { display: flex; flex-direction: row; align-items: center; padding: 6rem 10rem 6rem 16rem; min-height: 40rem; border-top-left-radius: 10rem; border-top-right-radius: 10rem; background-color: rgba(0, 0, 0, 0.25); }
+.dialogTitle { font-size: 16rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1rem; color: #a6dcff; margin-right: 16rem; }
+.dialogHeaderFill { display: flex; flex-direction: row; align-items: center; flex: 1 1 0; min-width: 0; padding-top: 2rem; }
+.dialogHeaderSpace { flex: 1; align-self: stretch; }
+.dialogClose { width: 26rem; height: 26rem; margin-left: 10rem; background-color: rgba(255, 255, 255, 0.85); mask-image: url(assetdb://gameui/Media/Glyphs/Close.svg); mask-size: 70% 70%; mask-position: center; mask-repeat: no-repeat; }
+.dialogClose:hover { background-color: #ffffff; }
+/* A full-screen layer that places its dialog with flexbox (right from the first frame, whatever the parent's size). */
+.dockCenter, .dockBottom, .dockTop { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+.dockCenter { justify-content: center; }
+.dockTop { justify-content: flex-start; }
+.dockTopSpacer { flex-shrink: 0; width: 1rem; height: 70rem; }
+/* As Road Builder docks its bottom view: absolute, measured from the screen bottom by the game's own toolbar
+   height (no fallback inside var(): Gameface drops the whole declaration then). 56rem + toolbar = just above it. */
+.dockBottom { position: absolute; left: 0; right: 0; top: auto; width: auto; height: auto; bottom: calc(var(--toolbarHeight) + 56rem); justify-content: flex-end; }
+.choiceRows .palette { flex-wrap: nowrap; }
+/* --- symbol part: its button and the picker dialog --- */
+.symbolButton { display: flex; flex-direction: row; align-items: center; padding: 4rem 8rem; border-radius: 3rem; background-color: rgba(255, 255, 255, 0.1); }
+.symbolButton:hover { background-color: rgba(255, 255, 255, 0.22); }
+.symbolButtonText { margin-left: 8rem; font-size: 13rem; color: #fff; }
+.symbolButtonLib { color: rgba(255, 255, 255, 0.6); }
+.symbolDialog { width: 650rem; }
+.symbolTop { display: flex; flex-direction: row; align-items: center; padding: 10rem 14rem 4rem 14rem; }
+.symbolSearch { flex: 1; margin-right: 10rem; }
+.symbolLibrary { width: 220rem; }
+.symbolRecent { display: flex; flex-direction: row; padding: 4rem 14rem; border-bottom: 1rem solid rgba(255, 255, 255, 0.12); }
+.symbolBody { display: flex; flex-direction: row; padding: 8rem 14rem 14rem 14rem; }
+.symbolCategories { display: flex; flex-direction: column; width: 150rem; margin-right: 10rem; }
+.symbolGrid { flex: 1; height: 330rem; }
+.symbolCells { display: flex; flex-direction: row; }
+.symbolCell, .symbolCellOn { display: flex; align-items: center; justify-content: center; width: 46rem; height: 46rem; margin: 0 4rem 4rem 0; border-radius: 4rem; background-color: rgba(0, 107, 69, 0.85); }
+.symbolCell:hover { background-color: rgba(0, 140, 90, 0.95); }
+.symbolCellOn { background-color: rgba(80, 160, 255, 0.6); }
+.symbolEmpty { padding: 10rem 0; font-size: 13rem; color: rgba(255, 255, 255, 0.7); }
+/* --- wrapped rows (Controls.Flow): rows are measured and laid out explicitly, since a wrapped flex row does not grow in Gameface --- */
+.flow { display: flex; flex-direction: column; align-items: flex-start; align-self: stretch; }
+.flowGrow { display: flex; flex-direction: column; align-items: flex-start; flex: 1 1 0; min-width: 0; }
+.flowRow, .flowRowCenter { display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; }
+.flowCell { display: flex; flex-direction: row; align-items: center; flex-shrink: 0; }
+/* Groups of header controls (a label and its buttons) stay together on one row. */
+.headerGroup { display: flex; flex-direction: row; align-items: center; flex-shrink: 0; margin-bottom: 2rem; }
