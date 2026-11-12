@@ -3,7 +3,7 @@
   "theme": "hk",
   "id": "stacked-directions",
   "name": "Stacked destinations",
-  "scheme": "blue",
+  "scheme": "white",
   "items": [
     {
       "type": "row",
@@ -12,18 +12,18 @@
         {
           "type": "arrow",
           "direction": "up",
-          "height": 20
+          "height": 30
         },
         {
           "type": "column",
-          "align": "center",
+          "align": "start",
           "gap": 5,
           "items": [
             {
               "type": "text",
               "text": "Sha Tin",
               "height": 15,
-              "font": "HK Transport Medium"
+              "font": "HK Transport Heavy"
             },
             {
               "type": "text",
@@ -44,23 +44,23 @@
       "items": [
         {
           "type": "arrow",
-          "direction": "right",
-          "height": 20
+          "direction": "left",
+          "height": 30
         },
         {
           "type": "column",
-          "align": "center",
+          "align": "start",
           "gap": 5,
           "items": [
             {
               "type": "text",
-              "text": "Airport",
+              "text": "Lantau",
               "height": 15,
-              "font": "HK Transport Medium"
+              "font": "HK Transport Heavy"
             },
             {
               "type": "text",
-              "text": "機場",
+              "text": "大嶼山",
               "height": 15,
               "font": "Source Han Sans HK Bold"
             }
@@ -68,13 +68,11 @@
         },
         {
           "type": "symbol",
-          "symbol": "hk/airport",
-          "height": 25
+          "height": 40,
+          "symbol": "hk/airport"
         }
       ]
     }
-  ]
+  ],
+  "align": "start"
 }
-
-
-

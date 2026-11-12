@@ -1,28 +1,69 @@
 <Publish>
   <ModId Value="" />
   <DisplayName Value="Hong Kong Road Signs" />
-  <ShortDescription Value="Design Hong Kong road signs with Sign Builder" />
-  <LongDescription>Hong Kong Road Signs is a separate add-on for Sign Builder by K1234. It adds Hong Kong-specific editing controls, sign parts, symbols, templates and rendering. It is more than a colour theme: you can assemble and edit detailed Hong Kong direction signs in the Sign Builder interface and place them using Sign Builder&#39;s existing tools.
+  <ShortDescription Value="Hong Kong road signs ／ 香港道路標誌" />
+  <LongDescription>HONG KONG ROAD SIGNS
 
-SIGN BOARDS AND LAYOUT
-- Create blue, green, yellow, white, brown or black signs, with rounded corners and editable borders. Make ordinary rectangular boards or left- and right-pointing flag boards. Adjust the flag board&#39;s inner arrow thickness while keeping the legend clear of the stripe.
-- Build signs from movable text, symbols, route shields, arrows, rows, columns, panels and coloured destination chips. Change chip colours, corner radius, border colour and border thickness. Align parts, adjust spacing, and size signs to their text or to highway or local-road lanes.
-- Add full-length rounded Stack Border Dividers, shorter rectangular dividers, and dashed Lane Separation Lines. Use them to separate stacked destinations or traffic lanes.
+Create Hong Kong-style road signs in the Sign Builder editor. This add-on adds its own sign parts, controls, symbols, templates and renderer while using Sign Builder's placement and save system.
 
-BILINGUAL TEXT AND SYMBOLS
-- Put English and Traditional Chinese on the same sign, including equal-height bilingual legends. Choose Transport Medium or Heavy for English and Noto Sans HK or Source Han Sans HK Bold for Chinese. Adjust letter size, spacing, colour and alignment; Hong Kong Chinese text has a built-in spacing default.
-- Add Hong Kong route shields, expressway plates and exit numbers. The route shield adapts to longer numbers. Pick local symbols such as airport, MTR, tunnels, Disney, hospital, parking, pedestrian, wheelchair, cycling and traffic-restriction symbols. Rotate symbols in 90-degree steps.
-- Use Hong Kong stack and lane arrows, including straight, turn and fork directions. Add exit-left and exit-right diagrams or arrange signs in stacked layouts.
+BOARDS AND LAYOUT
+- Make blue general-road signs, green expressway signs, yellow destination panels, and white, brown or black signs. Choose rectangular or left- and right-pointing flag boards, rounded corners, border colours and border thickness.
+- Build a layout from movable text, symbols, route shields, arrows, rows, columns, panels and coloured destination chips. Change a chip's fill, outline, width and corner radius. Adjust spacing and alignment, and size a sign to its contents or road lanes.
+- Use rounded Stack Border Dividers across a whole board, shorter rectangular dividers, and dashed Lane Separation Lines. Stack destinations or divide lanes.
+- Adjust a flag board's inner arrow thickness and reserve space so text and symbols stay clear of its white stripe.
 
-EXITS, ROUNDABOUTS AND DISPLAYS
-- Add large or small EXIT number plaques above a sign or inside its face. Edit the number separately from the EXIT / 出 symbol and choose the plaque&#39;s position and size.
-- Create conventional or spiral roundabout diagrams with normal, auxiliary or U-turn roundels. Add multiple side roads and choose each road&#39;s side, Arrow/Stub/RedBar shape, angle and width.
-- Add a JTIS minutes display inside a sign or above it, edit the minutes shown, and choose the LED colour. Regular LED message parts support English dot-matrix text and Chinese characters, so bilingual messages can appear on electronic signs.
+TEXT, ROUTES AND SYMBOLS
+- Put English and Traditional Chinese together at equal letter height. Choose Transport Medium or Heavy for English and Noto Sans HK or Source Han Sans HK Bold for Chinese. Edit size, letter spacing, line spacing and alignment.
+- Add Hong Kong route shields, expressway route plates and editable exit numbers. Route shields widen for longer numbers.
+- Choose symbols for the airport, MTR, tunnels, Disney, hospital, parking, pedestrians, wheelchair access, cycling and traffic restrictions. Rotate symbols in 90-degree steps.
+- Add Hong Kong stack, lane and gantry arrows, including straight, turning and fork directions.
 
-STARTING POINTS AND COMPATIBILITY
-- Start with four quick-add presets and 12 Hong Kong sign templates, then edit or rearrange their individual parts. The in-game preview and placed sign use the same Hong Kong renderer.
-- Requires the original Sign Builder mod (Paradox Mods ID 165726). This add-on uses Sign Builder&#39;s sign placement and save format. If a required Sign Builder API changes, the add-on stays inactive so the original mod can continue to load; an add-on update may then be needed. Install both mods, but do not install a second copy of Sign Builder.</LongDescription>
+DIAGRAMS, EXITS AND ELECTRONIC SIGNS
+- Make exit-left and exit-right fork diagrams, or conventional and spiral roundabout diagrams. Choose a normal, auxiliary or U-turn roundel and add multiple side roads with adjustable side, arrow or stub or red-bar shape, angle and width.
+- Place large or small EXIT / 出 plaques above or inside a sign. The EXIT symbol and number are separate, so the number is easy to edit.
+- Add a JTIS minutes display above or inside a sign. Edit the minutes and LED colour. Regular LED message parts can display Chinese characters as well as English dot-matrix text.
+
+GET STARTED
+- Includes four quick-add presets and 11 editable Hong Kong sign templates.
+- Requires the original Sign Builder mod (Paradox Mods ID 165726). Install and enable both mods. This add-on uses Sign Builder's placement and save format. If a required Sign Builder API changes, the add-on stays inactive so the original mod can continue to load; the add-on may then need an update.
+
+SUPPORT
+If you enjoy this add-on, you can support K1234 at https://buymeacoffee.com/k1234
+
+香港道路標誌
+
+在 Sign Builder 編輯器內製作香港風格道路標誌。本模組加入專用路牌部件、編輯選項、符號、範本及繪製功能，並沿用 Sign Builder 的擺放及存檔系統。
+
+路牌及排版
+- 製作藍底一般道路指示牌、綠底快速公路指示牌、黃色目的地色塊，以及白色、棕色或黑色路牌。可選長方形或左右箭頭旗形路牌，並調整圓角、邊框顏色及粗幼。
+- 自由組合文字、符號、路線盾牌、箭嘴、橫列、直欄、面板和目的地色塊。可調整色塊底色、邊框、闊度、圓角，以及部件的間距和對齊方式；路牌闊度亦可按內容或行車線設定。
+- 使用貫穿整塊路牌的圓角堆疊分隔線、較短的直角分隔線，以及虛線車道分隔線，編排多個目的地或分隔行車線。
+- 可調整旗形路牌內部白色箭頭的粗幼，並為文字及符號預留空間，避免與白色斜線重疊。
+
+中英文字、路線及符號
+- 同一塊路牌可同時顯示英文和繁體中文，並設定兩種文字為相同字高。英文可選 Transport Medium 或 Heavy；中文可選 Noto Sans HK 或 Source Han Sans HK Bold。可調整字體大小、字距、行距及對齊方式。
+- 加入香港路線盾牌、快速公路路線牌和可編輯出口號碼；較長的路線號碼會使用較闊的盾牌。
+- 使用機場、港鐵、隧道、迪士尼、醫院、停車場、行人、輪椅通道、單車及交通限制等符號，並以 90 度為單位旋轉符號。
+- 加入香港式堆疊、車道和龍門架箭嘴，包括直行、轉彎及分岔方向。
+
+道路圖、出口及電子顯示
+- 製作左右出口分岔圖，以及一般或螺旋式迴旋處道路圖。可選一般、輔助或掉頭圓環，亦可加入多條支路，調整其方向、箭嘴／短支路／紅色橫線形狀、角度及闊度。
+- 在路牌上方或牌面內加入大型或小型 EXIT／出 牌。出口符號與數字分開，可獨立修改號碼。
+- 在路牌上方或牌面內加入 JTIS 行車時間顯示牌，修改分鐘數和 LED 顏色。一般 LED 訊息牌除英文點陣文字外亦支援中文字。
+
+開始使用
+- 提供 11 款可編輯香港路牌範本。
+- 必須先安裝並啟用原版 Sign Builder（Paradox Mods 編號 165726），再啟用本擴充模組。模組沿用 Sign Builder 的擺放及存檔格式。若原版日後更改必要的程式介面，本模組會停止啟用，原版仍可載入；屆時可能需要更新本模組。
+
+支持作者
+如果喜歡本模組，歡迎到 https://buymeacoffee.com/k1234 支持。</LongDescription>
   <Thumbnail Value="Properties/Thumbnail.png" />
+  <Screenshot Value="Properties/Screenshot1.jpg" />
+  <Screenshot Value="Properties/Screenshot2.jpg" />
+  <Screenshot Value="Properties/Screenshot3.jpg" />
+  <Screenshot Value="Properties/Screenshot4.jpg" />
+  <Screenshot Value="Properties/Screenshot5.jpg" />
+  <Screenshot Value="Properties/Screenshot6.jpg" />
   <Tag Value="Code Mod" />
   <ForumLink Value="" />
   <ModVersion Value="1.1.0" />

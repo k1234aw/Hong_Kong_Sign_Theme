@@ -1,49 +1,43 @@
 {
   "formatVersion": 2,
   "theme": "hk",
-  "id": "arrow-airport",
-  "name": "Right flag to Airport",
-  "shape": "arrow-right",
   "scheme": "blue",
-  "align": "center",
   "items": [
     {
       "type": "column",
-      "align": "center",
-      "gap": 5,
+      "align": "start",
       "items": [
         {
           "type": "text",
-          "text": "Hong Kong (W)",
+          "text": "Tai Kok Tsui(W) ",
           "height": 16,
           "font": "HK Transport Medium"
         },
         {
           "type": "text",
-          "text": "香港（西）",
-          "height": 16,
-          "font": "Source Han Sans HK Bold"
+          "text": "大角咀(西)",
+          "height": 16
         }
-      ]
+      ],
+      "place": "start"
     },
     {
       "type": "column",
-      "align": "center",
-      "gap": 5,
+      "align": "start",
       "items": [
         {
           "type": "text",
-          "text": "Lantau",
+          "text": "Hong Kong(W)",
           "height": 16,
           "font": "HK Transport Medium"
         },
         {
           "type": "text",
-          "text": "大嶼山",
-          "height": 16,
-          "font": "Source Han Sans HK Bold"
+          "text": "香港(西)",
+          "height": 16
         }
-      ]
+      ],
+      "place": "start"
     },
     {
       "type": "row",
@@ -51,18 +45,17 @@
       "items": [
         {
           "type": "column",
-          "align": "center",
-          "gap": 5,
+          "align": "start",
           "items": [
             {
               "type": "text",
-              "text": "Airport",
+              "text": "Lantau",
               "height": 16,
               "font": "HK Transport Medium"
             },
             {
               "type": "text",
-              "text": "機場",
+              "text": "大嶼山",
               "height": 16,
               "font": "Source Han Sans HK Bold"
             }
@@ -70,12 +63,15 @@
         },
         {
           "type": "symbol",
+          "height": 40,
           "symbol": "hk/airport",
-          "height": 25
+          "rotation": 90
         }
-      ]
+      ],
+      "place": "start"
     }
   ],
-  "minWidth": 210
+  "shape": "arrow-right",
+  "flagArrowThickness": 1,
+  "name": "Flag sign"
 }
-

@@ -1,0 +1,59 @@
+{
+  "formatVersion": 2,
+  "theme": "hk",
+  "id": "stacked-directions",
+  "name": "All destinations",
+  "scheme": "blue",
+  "items": [
+    {
+      "type": "row",
+      "align": "center",
+      "items": [
+        {
+          "type": "column",
+          "align": "center",
+          "gap": 5,
+          "items": [
+            {
+              "type": "text",
+              "text": "All Destinations",
+              "height": 15,
+              "font": "HK Transport Medium"
+            },
+            {
+              "type": "text",
+              "text": "所有目的地",
+              "height": 15,
+              "font": "Source Han Sans HK Bold"
+            }
+          ]
+        }
+      ],
+      "place": "center"
+    },
+    {
+      "type": "divider",
+      "lineStyle": "short"
+    },
+    {
+      "type": "row",
+      "align": "center",
+      "items": [
+        {
+          "type": "arrow",
+          "style": "overhead",
+          "direction": "down",
+          "height": 20
+        },
+        {
+          "type": "arrow",
+          "style": "overhead",
+          "direction": "down",
+          "height": 20
+        }
+      ],
+      "justify": "even"
+    }
+  ],
+  "minLanes": 2
+}

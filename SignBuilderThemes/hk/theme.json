@@ -162,11 +162,6 @@
         "align": "center",
         "items": [
           {
-            "type": "symbol",
-            "symbol": "hk/airport",
-            "height": 25
-          },
-          {
             "type": "column",
             "align": "center",
             "gap": 5,
@@ -174,16 +169,21 @@
               {
                 "type": "text",
                 "text": "Airport",
-                "height": 14,
+                "height": 16,
                 "font": "HK Transport Medium"
               },
               {
                 "type": "text",
                 "text": "機場",
-                "height": 14,
+                "height": 16,
                 "font": "Source Han Sans HK Bold"
               }
             ]
+          },
+          {
+            "type": "symbol",
+            "symbol": "hk/airport",
+            "height": 40
           }
         ]
       }
@@ -194,6 +194,7 @@
         "type": "chip",
         "scheme": "yellow",
         "border": true,
+        "borderWidth": 3,
         "radius": 3,
         "items": [
           {
@@ -224,6 +225,7 @@
         "type": "chip",
         "scheme": "green",
         "border": true,
+        "borderWidth": 3,
         "radius": 3,
         "items": [
           {

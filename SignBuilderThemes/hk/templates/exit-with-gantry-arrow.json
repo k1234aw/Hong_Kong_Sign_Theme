@@ -1,8 +1,8 @@
 {
   "formatVersion": 2,
   "theme": "hk",
-  "id": "exit-tab-small",
-  "name": "Green exit with small number border",
+  "id": "exit-tab",
+  "name": "Exit with gantry arrow",
   "scheme": "green",
   "align": "center",
   "items": [
@@ -10,13 +10,13 @@
       "type": "exit",
       "position": "tab",
       "align": "left",
-      "number": "8",
+      "number": "2",
       "height": 22,
-      "exitStyle": "small"
+      "exitStyle": "large"
     },
     {
       "type": "row",
-      "align": "center",
+      "align": "end",
       "justify": "even",
       "items": [
         {
@@ -37,18 +37,19 @@
                     {
                       "type": "text",
                       "text": "Mong Kok",
-                      "height": 14,
+                      "height": 16,
                       "font": "HK Transport Medium"
                     },
                     {
                       "type": "text",
                       "text": "旺角",
-                      "height": 14,
+                      "height": 16,
                       "font": "Source Han Sans HK Bold"
                     }
                   ]
                 }
-              ]
+              ],
+              "borderWidth": 3
             },
             {
               "type": "arrow",
@@ -115,6 +116,3 @@
     }
   ]
 }
-
-
-

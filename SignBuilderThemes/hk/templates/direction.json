@@ -2,7 +2,7 @@
   "formatVersion": 2,
   "theme": "hk",
   "id": "bilingual-blue",
-  "name": "Blue bilingual direction",
+  "name": "Direction",
   "scheme": "blue",
   "align": "center",
   "items": [
@@ -47,10 +47,7 @@
     {
       "type": "arrow",
       "direction": "up",
-      "height": 24
+      "height": 30
     }
   ]
 }
-
-
-

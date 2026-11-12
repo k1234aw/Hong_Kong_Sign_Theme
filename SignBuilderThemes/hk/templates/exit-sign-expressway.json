@@ -1,0 +1,57 @@
+{
+  "formatVersion": 2,
+  "theme": "hk",
+  "id": "exit-diagram",
+  "name": "Exit sign expressway",
+  "scheme": "green",
+  "minWidth": 200,
+  "items": [
+    {
+      "type": "row",
+      "align": "end",
+      "justify": "even",
+      "items": [
+        {
+          "type": "exit",
+          "align": "left",
+          "exitStyle": "large",
+          "number": "14",
+          "height": 15
+        },
+        {
+          "type": "arrow",
+          "direction": "up-left",
+          "margin": {
+            "bottom": 15
+          },
+          "height": 40
+        },
+        {
+          "type": "column",
+          "align": "start",
+          "gap": 5,
+          "items": [
+            {
+              "type": "text",
+              "text": "Yuen Long (W)",
+              "height": 16,
+              "font": "HK Transport Medium"
+            },
+            {
+              "type": "text",
+              "text": "Tin Shui Wai (E)",
+              "height": 16,
+              "font": "HK Transport Medium"
+            },
+            {
+              "type": "text",
+              "text": "元朗(西)及天水圍(東)",
+              "height": 16,
+              "font": "Source Han Sans HK Bold"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

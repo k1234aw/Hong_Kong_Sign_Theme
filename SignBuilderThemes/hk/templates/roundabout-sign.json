@@ -1,0 +1,277 @@
+{
+  "formatVersion": 2,
+  "theme": "hk",
+  "id": "roundabout",
+  "name": "Roundabout sign",
+  "scheme": "blue",
+  "minWidth": 220,
+  "items": [
+    {
+      "type": "row",
+      "align": "center",
+      "items": [
+        {
+          "type": "chip",
+          "scheme": "white",
+          "items": [
+            {
+              "type": "column",
+              "align": "start",
+              "gap": 5,
+              "items": [
+                {
+                  "type": "text",
+                  "text": "Tsuen Wan",
+                  "height": 16,
+                  "font": "HK Transport Heavy"
+                },
+                {
+                  "type": "text",
+                  "text": "West Station",
+                  "height": 16,
+                  "font": "HK Transport Heavy",
+                  "tracking": 0
+                },
+                {
+                  "type": "text",
+                  "text": "荃灣西站",
+                  "height": 16,
+                  "font": "Source Han Sans HK Bold"
+                }
+              ]
+            },
+            {
+              "type": "symbol",
+              "height": 46,
+              "symbol": "hk/mtr",
+              "place": "start"
+            }
+          ],
+          "borderWidth": 3,
+          "border": "#ffffff"
+        }
+      ],
+      "place": "center"
+    },
+    {
+      "type": "row",
+      "align": "center",
+      "items": [
+        {
+          "type": "chip",
+          "scheme": "blue",
+          "items": [
+            {
+              "type": "column",
+              "align": "center",
+              "items": [
+                {
+                  "type": "text",
+                  "text": "Tsuen Wan(C)",
+                  "height": 16,
+                  "place": "center"
+                },
+                {
+                  "type": "text",
+                  "text": "荃灣(中)",
+                  "height": 16,
+                  "tracking": 24,
+                  "place": "start"
+                }
+              ],
+              "place": "center"
+            }
+          ]
+        }
+      ],
+      "place": "center"
+    },
+    {
+      "type": "row",
+      "align": "center",
+      "justify": "even",
+      "items": [
+        {
+          "type": "chip",
+          "scheme": "green",
+          "border": true,
+          "items": [
+            {
+              "type": "column",
+              "align": "start",
+              "gap": 5,
+              "items": [
+                {
+                  "type": "row",
+                  "align": "center",
+                  "items": [
+                    {
+                      "type": "text",
+                      "text": "Sham Tseng",
+                      "height": 16
+                    },
+                    {
+                      "type": "symbol",
+                      "height": 24,
+                      "symbol": "hk/expressway"
+                    }
+                  ],
+                  "justify": "between"
+                },
+                {
+                  "type": "row",
+                  "align": "center",
+                  "items": [
+                    {
+                      "type": "text",
+                      "text": "深井",
+                      "height": 16
+                    },
+                    {
+                      "type": "shield",
+                      "network": "R",
+                      "number": "4",
+                      "height": 24
+                    }
+                  ],
+                  "justify": "between"
+                },
+                {
+                  "type": "text",
+                  "text": "Tuen Mun",
+                  "height": 16
+                },
+                {
+                  "type": "text",
+                  "text": "屯門",
+                  "height": 16
+                }
+              ],
+              "margin": {
+                "top": -1
+              }
+            }
+          ],
+          "borderWidth": 3,
+          "radius": 2.4,
+          "align": "center"
+        },
+        {
+          "type": "diagram",
+          "shape": "roundabout",
+          "roundaboutSubtype": "Conventional",
+          "roundelShape": "Normal",
+          "sideRoads": [
+            {
+              "side": "left",
+              "shape": "Arrow",
+              "angle": 90,
+              "width": 4
+            },
+            {
+              "side": "top",
+              "shape": "Arrow",
+              "angle": 0,
+              "width": 4
+            },
+            {
+              "side": "right",
+              "shape": "Arrow",
+              "angle": 90,
+              "width": 4
+            }
+          ],
+          "height": 128
+        },
+        {
+          "type": "chip",
+          "scheme": "green",
+          "border": true,
+          "items": [
+            {
+              "type": "column",
+              "align": "start",
+              "gap": 5,
+              "items": [
+                {
+                  "type": "row",
+                  "align": "center",
+                  "items": [
+                    {
+                      "type": "column",
+                      "align": "start",
+                      "items": [
+                        {
+                          "type": "column",
+                          "align": "center",
+                          "items": [
+                            {
+                              "type": "text",
+                              "text": "Tsing Yi",
+                              "height": 16
+                            },
+                            {
+                              "type": "text",
+                              "text": "青衣",
+                              "height": 16,
+                              "place": "start"
+                            }
+                          ]
+                        }
+                      ],
+                      "place": "start"
+                    },
+                    {
+                      "type": "symbol",
+                      "height": 38,
+                      "symbol": "hk/airport"
+                    }
+                  ]
+                },
+                {
+                  "type": "row",
+                  "align": "center",
+                  "items": [
+                    {
+                      "type": "text",
+                      "text": "Kowloon",
+                      "height": 16
+                    },
+                    {
+                      "type": "symbol",
+                      "height": 24,
+                      "symbol": "hk/expressway",
+                      "color": "#ffffff"
+                    }
+                  ],
+                  "justify": "between"
+                },
+                {
+                  "type": "row",
+                  "align": "start",
+                  "items": [
+                    {
+                      "type": "text",
+                      "text": "九龍",
+                      "height": 16
+                    },
+                    {
+                      "type": "shield",
+                      "network": "R",
+                      "number": "4",
+                      "height": 24
+                    }
+                  ],
+                  "justify": "between"
+                }
+              ],
+              "place": "start"
+            }
+          ],
+          "borderWidth": 3,
+          "align": "start"
+        }
+      ]
+    }
+  ]
+}

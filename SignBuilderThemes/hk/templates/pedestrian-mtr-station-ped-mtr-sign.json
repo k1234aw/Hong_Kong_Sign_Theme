@@ -1,0 +1,32 @@
+{
+  "formatVersion": 2,
+  "theme": "hk",
+  "scheme": "blue",
+  "items": [
+    {
+      "type": "row",
+      "align": "center",
+      "items": [
+        {
+          "type": "arrow",
+          "direction": "left",
+          "height": 35
+        },
+        {
+          "type": "symbol",
+          "height": 30,
+          "symbol": "hk/mtr"
+        },
+        {
+          "type": "symbol",
+          "height": 34,
+          "symbol": "hk/left-pedestrian"
+        }
+      ],
+      "justify": "even"
+    }
+  ],
+  "minLanes": 1,
+  "laneKind": "local",
+  "name": "Ped MTR Sign"
+}

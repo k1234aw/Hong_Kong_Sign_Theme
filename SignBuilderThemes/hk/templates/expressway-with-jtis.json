@@ -1,0 +1,195 @@
+{
+  "formatVersion": 2,
+  "theme": "hk",
+  "id": "exit-tab",
+  "name": "Expressway with JTIS",
+  "scheme": "green",
+  "align": "center",
+  "items": [
+    {
+      "type": "row",
+      "align": "end",
+      "justify": "even",
+      "items": [
+        {
+          "type": "column",
+          "align": "center",
+          "items": [
+            {
+              "type": "text",
+              "text": "Ma On Shan",
+              "height": 16,
+              "font": "HK Transport Medium"
+            },
+            {
+              "type": "text",
+              "text": "Kowloon East",
+              "height": 16,
+              "font": "HK Transport Medium"
+            },
+            {
+              "type": "text",
+              "text": "馬鞍山及九龍(東)",
+              "height": 16,
+              "font": "Source Han Sans HK Bold",
+              "place": "center",
+              "tracking": 40
+            },
+            {
+              "type": "row",
+              "align": "center",
+              "items": [
+                {
+                  "type": "arrow",
+                  "direction": "down",
+                  "height": 24,
+                  "style": "overhead"
+                },
+                {
+                  "type": "shield",
+                  "network": "R",
+                  "number": "2",
+                  "height": 24
+                },
+                {
+                  "type": "minutes",
+                  "minutes": "9",
+                  "height": 10,
+                  "color": "#46ff74"
+                }
+              ],
+              "place": "center",
+              "justify": "between"
+            }
+          ]
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "column",
+          "align": "center",
+          "items": [
+            {
+              "type": "column",
+              "align": "start",
+              "gap": 5,
+              "items": [
+                {
+                  "type": "row",
+                  "align": "center",
+                  "items": [
+                    {
+                      "type": "text",
+                      "text": "Sha Tin, Kowloon (C) & Kowloon (W)",
+                      "height": 16,
+                      "font": "HK Transport Medium"
+                    },
+                    {
+                      "type": "symbol",
+                      "height": 24,
+                      "symbol": "hk/expressway-red"
+                    }
+                  ]
+                },
+                {
+                  "type": "row",
+                  "align": "start",
+                  "items": [
+                    {
+                      "type": "text",
+                      "text": "沙田，九龍(中)及九龍(西)",
+                      "height": 16,
+                      "font": "Source Han Sans HK Bold"
+                    },
+                    {
+                      "type": "symbol",
+                      "height": 40,
+                      "symbol": "hk/airport"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "row",
+              "align": "center",
+              "items": [
+                {
+                  "type": "row",
+                  "align": "center",
+                  "items": [
+                    {
+                      "type": "arrow",
+                      "direction": "down",
+                      "height": 24,
+                      "style": "overhead"
+                    },
+                    {
+                      "type": "shield",
+                      "network": "R",
+                      "number": "9",
+                      "height": 24
+                    }
+                  ]
+                },
+                {
+                  "type": "row",
+                  "align": "center",
+                  "items": [
+                    {
+                      "type": "minutes",
+                      "minutes": "10",
+                      "height": 10,
+                      "color": "#46ff74"
+                    },
+                    {
+                      "type": "arrow",
+                      "direction": "down",
+                      "height": 24,
+                      "style": "overhead"
+                    },
+                    {
+                      "type": "shield",
+                      "network": "R",
+                      "number": "9",
+                      "height": 24
+                    }
+                  ]
+                },
+                {
+                  "type": "row",
+                  "align": "center",
+                  "items": [
+                    {
+                      "type": "minutes",
+                      "minutes": "11",
+                      "height": 10,
+                      "color": "#46ff74"
+                    },
+                    {
+                      "type": "arrow",
+                      "direction": "down",
+                      "height": 24,
+                      "style": "overhead"
+                    },
+                    {
+                      "type": "shield",
+                      "network": "R",
+                      "number": "9",
+                      "height": 24
+                    }
+                  ]
+                }
+              ],
+              "justify": "between"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "_hkGlow": {
+    "type": "led"
+  }
+}

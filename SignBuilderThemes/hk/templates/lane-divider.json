@@ -2,13 +2,13 @@
   "formatVersion": 2,
   "theme": "hk",
   "id": "blue-lanes-dashed",
-  "name": "Blue lanes with dashed divider",
+  "name": "Lane divider",
   "scheme": "blue",
   "minLanes": 2,
   "items": [
     {
       "type": "row",
-      "align": "start",
+      "align": "end",
       "justify": "even",
       "items": [
         {
@@ -23,13 +23,13 @@
                 {
                   "type": "text",
                   "text": "Wan Chai (N)",
-                  "height": 14,
+                  "height": 16,
                   "font": "HK Transport Medium"
                 },
                 {
                   "type": "text",
                   "text": "灣仔（北）",
-                  "height": 14,
+                  "height": 16,
                   "font": "Source Han Sans HK Bold"
                 }
               ]
@@ -42,13 +42,13 @@
                 {
                   "type": "text",
                   "text": "Kowloon",
-                  "height": 14,
+                  "height": 16,
                   "font": "HK Transport Medium"
                 },
                 {
                   "type": "text",
                   "text": "九龍",
-                  "height": 14,
+                  "height": 16,
                   "font": "Source Han Sans HK Bold"
                 }
               ]
@@ -56,7 +56,7 @@
             {
               "type": "arrow",
               "direction": "up",
-              "height": 25
+              "height": 30
             }
           ]
         },
@@ -76,32 +76,13 @@
                 {
                   "type": "text",
                   "text": "North Point",
-                  "height": 14,
+                  "height": 16,
                   "font": "HK Transport Medium"
                 },
                 {
                   "type": "text",
                   "text": "北角",
-                  "height": 14,
-                  "font": "Source Han Sans HK Bold"
-                }
-              ]
-            },
-            {
-              "type": "column",
-              "align": "center",
-              "gap": 5,
-              "items": [
-                {
-                  "type": "text",
-                  "text": "Kowloon (E)",
-                  "height": 14,
-                  "font": "HK Transport Medium"
-                },
-                {
-                  "type": "text",
-                  "text": "九龍（東）",
-                  "height": 14,
+                  "height": 16,
                   "font": "Source Han Sans HK Bold"
                 }
               ]
@@ -114,7 +95,7 @@
             {
               "type": "arrow",
               "direction": "up",
-              "height": 25
+              "height": 30
             }
           ]
         }
@@ -122,6 +103,3 @@
     }
   ]
 }
-
-
-
