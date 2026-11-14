@@ -66,9 +66,9 @@ If you enjoy this add-on, you can support K1234 at https://buymeacoffee.com/k123
   <Screenshot Value="Properties/Screenshot6.jpg" />
   <Tag Value="Code Mod" />
   <ForumLink Value="" />
-  <ModVersion Value="1.1.2" />
+  <ModVersion Value="1.1.3" />
   <GameVersion Value="1.6.*" />
   <Dependency Id="165726" />
-  <ChangeLog Value="Support Sign Builder's latest symbol libraries and restore symbols in Hong Kong and other themes." />
+  <ChangeLog Value="Add a Symbol picker and bundled symbol libraries for Hong Kong and other themes with the published Sign Builder 1.0.4 release." />
   <AccessLevel Value="Public" />
 </Publish>

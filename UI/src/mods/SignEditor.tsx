@@ -3,7 +3,7 @@ import { BackConsumer } from "cs2/input";
 import { useEffect, useMemo, useState } from "react";
 import { Arrange } from "./Arrange";
 import {
-  addonLibraries$, arrange, arrangeInfo$, cancelTool, editingDesign$, editorOpen$, editorReady, replacing$, savePosts, setEditorOpen, startGantry, startPosts, templates$, themes$, libraries$, toolMode$, toolStatus$,
+  addonLibraries$, arrange, arrangeInfo$, baseFormat$, cancelTool, editingDesign$, editorOpen$, editorReady, replacing$, savePosts, setBaseFormat, setEditorOpen, startGantry, startPosts, templates$, themes$, libraries$, toolMode$, toolStatus$,
 } from "./bindings";
 import { Choice, Confirm, Field } from "./Controls";
 import { Designer, DesignerAction } from "./Designer";
@@ -45,11 +45,17 @@ export const SignEditor = () => {
   const themes: Theme[] = useMemo(() => { try { return JSON.parse(themesJson); } catch { return []; } }, [themesJson]);
   const librariesJson = useValue(libraries$);
   const addonLibrariesJson = useValue(addonLibraries$);
+  const baseFormat = useValue(baseFormat$);
+  useEffect(() => setBaseFormat(baseFormat), [baseFormat]);
   const libraries: Record<string, SymbolLibrary> = useMemo(() => {
-    let base = {}, hk = {};
+    let base: Record<string, SymbolLibrary> = {}, bundled: Record<string, SymbolLibrary> = {};
     try { base = JSON.parse(librariesJson); } catch { /* older base has no library binding */ }
-    try { const library = JSON.parse(addonLibrariesJson); if (library?.id) hk = { [library.id]: library }; } catch { /* missing add-on library */ }
-    return { ...base, ...hk };
+    try {
+      const parsed = JSON.parse(addonLibrariesJson);
+      bundled = parsed?.id ? { [parsed.id]: parsed } : parsed ?? {};
+    } catch { /* missing add-on libraries */ }
+    // Use the author's current libraries when available, and the add-on's HK library for HK signs.
+    return { ...bundled, ...base, ...(bundled.hk ? { hk: bundled.hk } : {}) };
   }, [librariesJson, addonLibrariesJson]);
   // Libraries first: a theme's arrows come from them.
   useEffect(() => registerLibraries(libraries), [libraries]);

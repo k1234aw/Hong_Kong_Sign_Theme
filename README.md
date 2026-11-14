@@ -6,7 +6,7 @@ Hong Kong Road Signs is created by K1234.
 
 This is a separate add-on for [Sign Builder](https://mods.paradoxplaza.com/mods/165726/Windows). Install and enable Sign Builder first, then enable this add-on.
 
-Version 1.1.2 is built for the Sign Builder main source from 12 November 2026, which includes symbol libraries for all themes. This is a local compatibility build until the author publishes that feature set.
+Version 1.1.3 bundles the symbol libraries and Symbol picker in this add-on. It works with the published Sign Builder 1.0.4 release without changing that mod. The add-on also accepts the newer Sign Builder main source; its Hong Kong theme must be packaged in the matching theme format. For the public 1.0.4 release, run `node prepare-public-theme.mjs <add-on package directory>` after copying the theme files into the package. This writes format 1 copies of the Hong Kong theme and templates; the source files remain in format 2 for the newer base.
 
 ## Features
 

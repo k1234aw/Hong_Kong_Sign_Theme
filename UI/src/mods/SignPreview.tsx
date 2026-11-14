@@ -66,7 +66,7 @@ function loadRenderer(): Promise<void> {
     };
     script.onerror = () => { loading = null; resolve(); };
     const library = document.createElement("script");
-    library.src = RENDERER_BASE + "hk-library.js";
+    library.src = RENDERER_BASE + "addon-libraries.js";
     library.onload = () => document.head.appendChild(script);
     library.onerror = () => { loading = null; resolve(); };
     document.head.appendChild(library);

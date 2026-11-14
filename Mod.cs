@@ -22,6 +22,7 @@ namespace HKSignBuilderAddon
         private SignFaceBaker m_Baker;
         private static string s_ResourcesDir;
         internal static string LibraryJson { get; private set; } = "{}";
+        internal static int BaseFormat { get; private set; } = 1;
 
         public static bool Ready { get; private set; }
 
@@ -62,7 +63,7 @@ namespace HKSignBuilderAddon
                     return;
                 }
                 s_ResourcesDir = Path.Combine(Path.GetDirectoryName(asset.path), "Resources");
-                var libraryFile = Path.Combine(Path.GetDirectoryName(asset.path), "SignBuilderSymbols", "hk", "library.json");
+                var libraryFile = Path.Combine(s_ResourcesDir, "Renderer", "addon-libraries.json");
                 if (!File.Exists(Path.Combine(s_ResourcesDir, "Renderer", "renderer.js")))
                 {
                     Log.Warn("Hong Kong renderer is missing; original Sign Builder remains active.");
@@ -79,6 +80,7 @@ namespace HKSignBuilderAddon
                 m_Baker = new SignFaceBaker(s_ResourcesDir, cache);
                 BakerField.SetValue(null, m_Baker);
                 s_Instance = this;
+                BaseFormat = v2 ? 2 : 1;
                 Ready = true;
                 updateSystem.UpdateAt<HKAddonUISystem>(SystemUpdatePhase.UIUpdate);
                 RegisterHost();
