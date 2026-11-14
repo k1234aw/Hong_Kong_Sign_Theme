@@ -12,6 +12,8 @@ export const templates$ = bindValue<string>(group, "templates", "[]");
 export const themes$ = bindValue<string>(group, "themes", "[]");
 /** JSON { id: library }: the symbol libraries (arrows, diagram arrowheads, symbols) themes draw from. */
 export const libraries$ = bindValue<string>(group, "libraries", "{}");
+export const addonLibraries$ = bindValue<string>(addonGroup, "libraries", "{}");
+export const baseFormat$ = bindValue<number>(addonGroup, "formatVersion", 1);
 /** JSON { designs, kind: "posts" | "gantry" | "new", nonce } pushed when a placed structure is opened for editing. */
 export const editingDesign$ = bindValue<string>(group, "editingDesign", "");
 /** Status line from the tool. */
@@ -30,12 +32,15 @@ export const setEditorOpen = (open: boolean) => trigger(addonGroup, "setEditorOp
 export const editorReady = () => trigger(addonGroup, "editorReady");
 /** The base baker looks for an LED part anywhere in the recipe before making a glow texture.
  * Keep the marker outside items so only the Hong Kong renderer draws the JTIS monitor. */
+let activeFormat = 1;
+export const setBaseFormat = (version: number) => { activeFormat = version >= 2 ? 2 : 1; };
 const prepareDesign = (design: any): any => {
-  if (!design || design.theme !== "hk") return design;
+  if (!design) return design;
   const hasMinutes = (items: any[]): boolean => (items ?? []).some((item) =>
     item?.type === "minutes" || hasMinutes(item?.items));
   const next = { ...design };
-  if (hasMinutes(next.items)) next._hkGlow = { type: "led" };
+  next.formatVersion = activeFormat;
+  if (next.theme === "hk" && hasMinutes(next.items)) next._hkGlow = { type: "led" };
   else delete next._hkGlow;
   return next;
 };

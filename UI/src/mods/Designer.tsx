@@ -240,7 +240,7 @@ const SymbolPicker = (props: {
   const [library, setLibrary] = useState(props.value && !props.own.includes(props.value.split("/")[0]) ? props.value.split("/")[0] : "");
   const [search, setSearch] = useState("");
   const [everywhere, setEverywhere] = useState(false);
-  const shown = library ? [library] : props.own;
+  const shown = library ? [library] : props.own.length ? props.own : Object.keys(props.libraries);
   const all = (ids: string[]) => ids.flatMap((id) => Object.entries(props.libraries[id]?.symbols ?? {}).map(([key, sym]) => ({ ref: `${id}/${key}`, lib: id, sym })));
   const entries = all(shown);
   // The arrows of the theme (as the sign draws them), or of the library shown.
@@ -280,7 +280,7 @@ const SymbolPicker = (props: {
         <div className={styles.symbolSearch}><TextBox value={search} onChange={(v) => { setSearch(v); setEverywhere(false); }} /></div>
         <div className={styles.symbolLibrary}>
           <Select value={library} onChange={(v) => { setLibrary(v); setCategory(null); }}
-            options={[{ value: "", label: "This theme's" }, ...others.map((l) => ({ value: l.id, label: l.name, title: l.description }))]} />
+            options={[{ value: "", label: props.own.length ? "This theme's" : "All libraries" }, ...others.map((l) => ({ value: l.id, label: l.name, title: l.description }))]} />
         </div>
       </div>
       {recent.length > 0 && !term && (
@@ -660,7 +660,7 @@ export const Designer = (props: {
   // The symbol picker, open for the selected symbol part.
   const [picking, setPicking] = useState(false);
   const renderer = useRenderer();
-  useEffect(() => setPicking(false), [selected]);
+  useEffect(() => { if (selected == null || getItem(design, selected)?.type !== "symbol") setPicking(false); }, [selected]);
   // For the in-game tests: select a part the way a click does, open the symbol picker, read the design (test builds only).
   useEffect(() => {
     if (!__SIGNBUILDER_TESTS__) return;
@@ -705,6 +705,7 @@ export const Designer = (props: {
     const r = insertItem(design, anchor, clone(made));
     setDesign(r.design);
     setSelected(r.path);
+    if (made.type === "symbol") setPicking(true);
   };
   const templates = props.templates.filter((t) => (t.design.theme ?? "us") === (theme?.id ?? "us"));
 

@@ -31,9 +31,19 @@
   // Families that already have an @font-face rule on this page (rules are never rewritten: re-parsing a style
   // sheet makes Gameface fetch every font in it again, all at once).
   var loadedFamilies = {};
+  // Sign Builder 1.0.4 themes predate library references. The add-on supplies the
+  // matching library choices without changing the installed base theme files.
+  var LEGACY_THEME_LIBRARIES = {
+    au: ["mutcd"], ca: ["mutcd"], ch: ["mutcd", "switzerland"], cn: ["china"],
+    de: ["mutcd", "germany"], fr: ["mutcd/overhead", "france"], jp: ["japan"],
+    nl: ["netherlands"], nordic: ["sweden"], pl: ["mutcd/overhead"],
+    uk: ["uk"], us: ["mutcd"],
+  };
 
   function registerTheme(def, base) {
     if (!def || !def.id) return;
+    if (!def.libraries && LEGACY_THEME_LIBRARIES[def.id])
+      def = Object.assign({}, def, { libraries: LEGACY_THEME_LIBRARIES[def.id] });
     var json = JSON.stringify(def);
     var known = THEMES[def.id];
     if (known && known.json === json && known.base === (base || "")) return;
@@ -391,6 +401,9 @@
     LIBS[lib.id] = { def: lib, json: json };
     libsVersion++;
   }
+  // The published 1.0.x base does not attach symbol libraries to bake requests.
+  if (window.HKSignBuilderLibraries)
+    Object.keys(window.HKSignBuilderLibraries).forEach(function (id) { registerLibrary(window.HKSignBuilderLibraries[id]); });
 
   // The theme's libraries, most important first: [{ lib, only (one arrow category, or null) }]; an arrow borrowing a
   // library ("library") has that one. Every design draws with them, made with 1.0 or since (1.0's arrows and road
