@@ -69,6 +69,6 @@ If you enjoy this add-on, you can support K1234 at https://buymeacoffee.com/k123
   <ModVersion Value="1.1.4" />
   <GameVersion Value="1.6.*" />
   <Dependency Id="165726" />
-  <ChangeLog Value="Fix editor UI crashes when selecting symbols by bundling complete SVG geometry for all symbol libraries." />
+  <ChangeLog Value="Bug fix" />
   <AccessLevel Value="Public" />
 </Publish>
