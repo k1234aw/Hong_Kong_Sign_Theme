@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using Colossal.Logging;
 using Game;
 using Game.Modding;
@@ -19,6 +21,7 @@ namespace HKSignBuilderAddon
         private static Mod s_Instance;
         private SignFaceBaker m_Baker;
         private static string s_ResourcesDir;
+        internal static string LibraryJson { get; private set; } = "{}";
 
         public static bool Ready { get; private set; }
 
@@ -32,12 +35,13 @@ namespace HKSignBuilderAddon
                 var formats = original.GetType("SignBuilder.Core.Formats", false);
                 var symbols = original.GetType("SignBuilder.Core.SymbolLibraries", false);
                 var themes = original.GetType("SignBuilder.Core.Themes", false);
-                if (symbols == null ||
-                    FormatVersion(formats, "Theme") < 2 ||
-                    FormatVersion(formats, "Design") < 2 ||
-                    FormatVersion(formats, "Library") < 1 ||
+                var v2 = symbols != null && FormatVersion(formats, "Theme") >= 2 &&
+                    FormatVersion(formats, "Design") >= 2 && FormatVersion(formats, "Library") >= 1 &&
+                    ConstantString(symbols, "ModFolder") == "SignBuilderSymbols";
+                var v1 = symbols == null && FormatVersion(formats, "Theme") == 1 &&
+                    FormatVersion(formats, "Design") == 1;
+                if ((!v1 && !v2) ||
                     ConstantString(themes, "ModFolder") != "SignBuilderThemes" ||
-                    ConstantString(symbols, "ModFolder") != "SignBuilderSymbols" ||
                     !HKAddonUISystem.SupportsBaseEditor ||
                     BakerField?.FieldType != typeof(SignFaceBaker) || BakerField.IsInitOnly ||
                     BusyField?.FieldType != typeof(bool) ||
@@ -58,22 +62,27 @@ namespace HKSignBuilderAddon
                     return;
                 }
                 s_ResourcesDir = Path.Combine(Path.GetDirectoryName(asset.path), "Resources");
+                var libraryFile = Path.Combine(Path.GetDirectoryName(asset.path), "SignBuilderSymbols", "hk", "library.json");
                 if (!File.Exists(Path.Combine(s_ResourcesDir, "Renderer", "renderer.js")))
                 {
                     Log.Warn("Hong Kong renderer is missing; original Sign Builder remains active.");
                     return;
                 }
+                LibraryJson = File.ReadAllText(libraryFile);
 
                 // The original mod owns placement and save data. Replace only its baker instance,
                 // before the first city-load warmup; no original files are changed on disk.
-                var cache = Path.Combine(UnityEngine.Application.persistentDataPath, "ModsData", "SignBuilderHK", "Faces");
+                string libraryVersion;
+                using (var hash = SHA256.Create())
+                    libraryVersion = BitConverter.ToString(hash.ComputeHash(Encoding.UTF8.GetBytes(LibraryJson))).Replace("-", "").Substring(0, 12);
+                var cache = Path.Combine(UnityEngine.Application.persistentDataPath, "ModsData", "SignBuilderHK", "Faces", libraryVersion);
                 m_Baker = new SignFaceBaker(s_ResourcesDir, cache);
                 BakerField.SetValue(null, m_Baker);
                 s_Instance = this;
                 Ready = true;
                 updateSystem.UpdateAt<HKAddonUISystem>(SystemUpdatePhase.UIUpdate);
                 RegisterHost();
-                Log.Info("Hong Kong sign add-on activated");
+                Log.Info($"Hong Kong sign add-on activated with Sign Builder format {(v2 ? 2 : 1)}");
             }
             catch (Exception e)
             {

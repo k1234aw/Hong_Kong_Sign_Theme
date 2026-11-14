@@ -3,7 +3,7 @@ import { BackConsumer } from "cs2/input";
 import { useEffect, useMemo, useState } from "react";
 import { Arrange } from "./Arrange";
 import {
-  arrange, arrangeInfo$, cancelTool, editingDesign$, editorOpen$, editorReady, replacing$, savePosts, setEditorOpen, startGantry, startPosts, templates$, themes$, libraries$, toolMode$, toolStatus$,
+  addonLibraries$, arrange, arrangeInfo$, cancelTool, editingDesign$, editorOpen$, editorReady, replacing$, savePosts, setEditorOpen, startGantry, startPosts, templates$, themes$, libraries$, toolMode$, toolStatus$,
 } from "./bindings";
 import { Choice, Confirm, Field } from "./Controls";
 import { Designer, DesignerAction } from "./Designer";
@@ -44,7 +44,13 @@ export const SignEditor = () => {
   const themesJson = useValue(themes$);
   const themes: Theme[] = useMemo(() => { try { return JSON.parse(themesJson); } catch { return []; } }, [themesJson]);
   const librariesJson = useValue(libraries$);
-  const libraries: Record<string, SymbolLibrary> = useMemo(() => { try { return JSON.parse(librariesJson); } catch { return {}; } }, [librariesJson]);
+  const addonLibrariesJson = useValue(addonLibraries$);
+  const libraries: Record<string, SymbolLibrary> = useMemo(() => {
+    let base = {}, hk = {};
+    try { base = JSON.parse(librariesJson); } catch { /* older base has no library binding */ }
+    try { const library = JSON.parse(addonLibrariesJson); if (library?.id) hk = { [library.id]: library }; } catch { /* missing add-on library */ }
+    return { ...base, ...hk };
+  }, [librariesJson, addonLibrariesJson]);
   // Libraries first: a theme's arrows come from them.
   useEffect(() => registerLibraries(libraries), [libraries]);
   useEffect(() => registerThemes(themes), [themes]);

@@ -26,6 +26,7 @@ namespace HKSignBuilderAddon
         {
             base.OnCreate();
             AddBinding(m_Open = new ValueBinding<bool>(Group, "editorOpen", false));
+            AddBinding(new ValueBinding<string>(Group, "libraries", Mod.LibraryJson));
             AddBinding(new TriggerBinding<bool>(Group, "setEditorOpen", SetOpen));
             AddBinding(new TriggerBinding(Group, "editorReady", () => m_UiReady = true));
         }

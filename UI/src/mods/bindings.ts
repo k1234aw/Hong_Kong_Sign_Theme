@@ -12,6 +12,7 @@ export const templates$ = bindValue<string>(group, "templates", "[]");
 export const themes$ = bindValue<string>(group, "themes", "[]");
 /** JSON { id: library }: the symbol libraries (arrows, diagram arrowheads, symbols) themes draw from. */
 export const libraries$ = bindValue<string>(group, "libraries", "{}");
+export const addonLibraries$ = bindValue<string>(addonGroup, "libraries", "{}");
 /** JSON { designs, kind: "posts" | "gantry" | "new", nonce } pushed when a placed structure is opened for editing. */
 export const editingDesign$ = bindValue<string>(group, "editingDesign", "");
 /** Status line from the tool. */
@@ -35,6 +36,7 @@ const prepareDesign = (design: any): any => {
   const hasMinutes = (items: any[]): boolean => (items ?? []).some((item) =>
     item?.type === "minutes" || hasMinutes(item?.items));
   const next = { ...design };
+  next.formatVersion = 2;
   if (hasMinutes(next.items)) next._hkGlow = { type: "led" };
   else delete next._hkGlow;
   return next;

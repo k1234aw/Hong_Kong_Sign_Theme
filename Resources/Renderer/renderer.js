@@ -391,6 +391,8 @@
     LIBS[lib.id] = { def: lib, json: json };
     libsVersion++;
   }
+  // The published 1.0.x base does not attach symbol libraries to bake requests.
+  if (window.HKSignBuilderLibrary) registerLibrary(window.HKSignBuilderLibrary);
 
   // The theme's libraries, most important first: [{ lib, only (one arrow category, or null) }]; an arrow borrowing a
   // library ("library") has that one. Every design draws with them, made with 1.0 or since (1.0's arrows and road

@@ -4,8 +4,8 @@
     <PublishConfigurationPath>Properties\PublishConfiguration.xml</PublishConfigurationPath>
   </PropertyGroup>
 
-  <Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH', 'EnvironmentVariableTarget.User'))\Mod.props" />
-  <Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH', 'EnvironmentVariableTarget.User'))\Mod.targets" />
+  <Import Project="$(CSII_TOOLPATH)\Mod.props" />
+  <Import Project="$(CSII_TOOLPATH)\Mod.targets" />
 
   <PropertyGroup>
     <OriginalSignBuilderPath Condition="'$(OriginalSignBuilderPath)'==''">$(LocalModsPath)\SignBuilder\SignBuilder.dll</OriginalSignBuilderPath>
@@ -29,6 +29,10 @@
     <Reference Update="System"><Private>false</Private></Reference>
     <Reference Update="System.Core"><Private>false</Private></Reference>
   </ItemGroup>
+
+  <Target Name="GenerateHongKongLibrary" BeforeTargets="DeployHongKongAssets" Condition="'$(NeedBuild)'">
+    <Exec Command="node generate-library-script.mjs" />
+  </Target>
 
   <Target Name="DeployHongKongAssets" AfterTargets="DeployWIP" Condition="'$(NeedBuild)'">
     <ItemGroup>

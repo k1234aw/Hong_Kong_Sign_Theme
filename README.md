@@ -6,6 +6,8 @@ Hong Kong Road Signs is created by K1234.
 
 This is a separate add-on for [Sign Builder](https://mods.paradoxplaza.com/mods/165726/Windows). Install and enable Sign Builder first, then enable this add-on.
 
+Version 1.1.2 is built for the Sign Builder main source from 12 November 2026, which includes symbol libraries for all themes. This is a local compatibility build until the author publishes that feature set.
+
 ## Features
 
 - Create bilingual English and Chinese road signs with Hong Kong fonts, colours, route shields, and symbols.

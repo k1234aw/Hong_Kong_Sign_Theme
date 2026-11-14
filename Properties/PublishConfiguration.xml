@@ -1,5 +1,5 @@
 <Publish>
-  <ModId Value="" />
+  <ModId Value="167270" />
   <DisplayName Value="Hong Kong Road Signs" />
   <ShortDescription Value="Hong Kong road signs ／ 香港道路標誌" />
   <LongDescription>HONG KONG ROAD SIGNS
@@ -66,9 +66,9 @@ If you enjoy this add-on, you can support K1234 at https://buymeacoffee.com/k123
   <Screenshot Value="Properties/Screenshot6.jpg" />
   <Tag Value="Code Mod" />
   <ForumLink Value="" />
-  <ModVersion Value="1.1.0" />
+  <ModVersion Value="1.1.2" />
   <GameVersion Value="1.6.*" />
   <Dependency Id="165726" />
-  <ChangeLog Value="Initial Hong Kong Road Signs release." />
+  <ChangeLog Value="Support Sign Builder's latest symbol libraries and restore symbols in Hong Kong and other themes." />
   <AccessLevel Value="Public" />
 </Publish>
