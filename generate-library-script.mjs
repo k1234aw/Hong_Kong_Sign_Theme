@@ -1,15 +1,13 @@
-import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { execFileSync } from "node:child_process";
 
 const root = dirname(fileURLToPath(import.meta.url));
 const bundled = join(root, "Resources", "SymbolLibraries");
-const libraries = {};
-for (const entry of readdirSync(bundled, { withFileTypes: true }).filter((e) => e.isDirectory()).sort((a, b) => a.name.localeCompare(b.name))) {
-  const library = JSON.parse(readFileSync(join(bundled, entry.name, "library.json"), "utf8"));
-  if (library.id !== entry.name) throw new Error(`Library ID mismatch: ${entry.name}`);
-  libraries[library.id] = library;
-}
+const project = join(root, "tools", "BuildSymbolLibraries", "BuildSymbolLibraries.csproj");
+const libraries = JSON.parse(execFileSync("dotnet", ["run", "--project", project, "--configuration", "Release", "--", bundled],
+  { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 }));
 const hk = JSON.parse(readFileSync(join(root, "SignBuilderSymbols", "hk", "library.json"), "utf8"));
 libraries[hk.id] = hk;
 const json = JSON.stringify(libraries);

@@ -12,6 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="tools\**\*.cs" />
     <Reference Include="Game"><Private>false</Private></Reference>
     <Reference Include="Colossal.Logging"><Private>false</Private></Reference>
     <Reference Include="Colossal.Core"><Private>false</Private></Reference>
