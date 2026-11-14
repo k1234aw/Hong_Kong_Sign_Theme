@@ -208,7 +208,8 @@ const BOX_BORDER: Option[] = [{ value: "", label: "Line" }, { value: "none", lab
 const symbolOf = (libraries: Record<string, SymbolLibrary>, ref?: string): LibrarySymbol | undefined => {
   if (!ref) return undefined;
   const [lib, ...id] = ref.split("/");
-  return libraries[lib]?.symbols?.[id.join("/")];
+  const sym = libraries[lib]?.symbols?.[id.join("/")];
+  return sym && Array.isArray(sym.viewBox) && sym.viewBox.length === 4 && Array.isArray(sym.parts) ? sym : undefined;
 };
 
 // Symbols picked lately, most recent first (kept between sessions where the page can store them).
@@ -241,7 +242,11 @@ const SymbolPicker = (props: {
   const [search, setSearch] = useState("");
   const [everywhere, setEverywhere] = useState(false);
   const shown = library ? [library] : props.own.length ? props.own : Object.keys(props.libraries);
-  const all = (ids: string[]) => ids.flatMap((id) => Object.entries(props.libraries[id]?.symbols ?? {}).map(([key, sym]) => ({ ref: `${id}/${key}`, lib: id, sym })));
+  const all = (ids: string[]) => ids.flatMap((id) => Object.keys(props.libraries[id]?.symbols ?? {}).flatMap((key) => {
+    const ref = `${id}/${key}`;
+    const sym = symbolOf(props.libraries, ref);
+    return sym ? [{ ref, lib: id, sym }] : [];
+  }));
   const entries = all(shown);
   // The arrows of the theme (as the sign draws them), or of the library shown.
   const arrowStyles = renderer ? renderer.arrowStyles(props.themeId, undefined, library || undefined) : [];

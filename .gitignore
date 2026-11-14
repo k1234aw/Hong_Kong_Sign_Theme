@@ -1,5 +1,7 @@
 /bin/
 /obj/
+/tools/**/bin/
+/tools/**/obj/
 /Library/
 /UI/node_modules/
 /UI/build/

@@ -44,7 +44,8 @@ export const ThemeArrowIcon = (props: {
 export const SymbolIcon = (props: { symbol?: LibrarySymbol; size?: number; color?: string }) => {
   const size = props.size ?? 28;
   const sym = props.symbol;
-  if (!sym) return <svg width={size + "rem"} height={size + "rem"} />;
+  if (!sym || !Array.isArray(sym.viewBox) || sym.viewBox.length !== 4 || !Array.isArray(sym.parts))
+    return <svg width={size + "rem"} height={size + "rem"} />;
   const v = sym.viewBox, s = Math.max(v[2], v[3]);
   return (
     <svg width={size + "rem"} height={size + "rem"} viewBox={[v[0] + v[2] / 2 - s / 2, v[1] + v[3] / 2 - s / 2, s, s].join(" ")}>
